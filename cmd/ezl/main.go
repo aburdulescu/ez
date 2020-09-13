@@ -35,7 +35,7 @@ func main() {
 		handleErr(fmt.Errorf("command not provided"))
 	}
 	var err error
-	db, err = badger.Open(badger.DefaultOptions("db"))
+	db, err = badger.Open(badger.DefaultOptions("db").WithLogger(nil))
 	if err != nil {
 		handleErr(err)
 	}
