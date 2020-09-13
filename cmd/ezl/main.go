@@ -5,16 +5,19 @@ import (
 	"os"
 )
 
-var cli = NewCLI(os.Args[0], map[string]Cmd{
-	"ls": Cmd{
+var cli = NewCLI(os.Args[0], []Cmd{
+	Cmd{
+		name:    "ls",
 		desc:    "List available files",
 		handler: onLs,
 	},
-	"add": Cmd{
+	Cmd{
+		name:    "add",
 		desc:    "Add a file",
 		handler: onAdd,
 	},
-	"rm": Cmd{
+	Cmd{
+		name:    "rm",
 		desc:    "Remove a file",
 		handler: onRm,
 	},
@@ -34,6 +37,7 @@ func main() {
 
 func handleErr(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	cli.Usage()
 	os.Exit(1)
 }
 
