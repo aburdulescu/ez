@@ -101,7 +101,6 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s %v\n", h, i)
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(&i); err != nil {
 		return err
@@ -114,10 +113,27 @@ func onAdd(args ...string) error {
 		}
 		return nil
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s %v\n", k, i)
+	return nil
 }
 
 func onRm(args ...string) error {
-	fmt.Println("rm")
+	if len(args) < 1 {
+		return fmt.Errorf("id wasn't provided")
+	}
+	id := args[0]
+	err := db.Update(func(txn *badger.Txn) error {
+		err := txn.Delete([]byte(id))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
