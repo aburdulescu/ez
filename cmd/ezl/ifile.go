@@ -7,10 +7,10 @@ import (
 )
 
 type IFile struct {
-	Hash string
-	Name string
-	Dir  string
-	Size int64
+	Hash string `json:"hash"`
+	Name string `json:"name"`
+	Dir  string `json:"dir"`
+	Size int64  `json:"size"`
 }
 
 func NewIFile(path string) (IFile, error) {
