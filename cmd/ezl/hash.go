@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 )
 
+const HASH_ALG = "sha1"
+
 type Hash []byte
 
 func NewHash(chunks []Hash) (Hash, error) {

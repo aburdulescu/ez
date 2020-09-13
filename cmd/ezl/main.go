@@ -106,8 +106,13 @@ func onAdd(args ...string) error {
 	if err := json.NewEncoder(&b).Encode(&i); err != nil {
 		return err
 	}
+	k := HASH_ALG + "-" + h.String()
 	err = db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(h.String()), b.Bytes())
+		err := txn.Set([]byte(k), b.Bytes())
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 	return err
 }
