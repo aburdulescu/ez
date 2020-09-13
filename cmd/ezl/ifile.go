@@ -7,18 +7,12 @@ import (
 )
 
 type IFile struct {
-	Hash string `json:"hash"`
 	Name string `json:"name"`
 	Dir  string `json:"dir"`
 	Size int64  `json:"size"`
 }
 
-func NewIFile(path string) (IFile, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return IFile{}, err
-	}
-	defer f.Close()
+func NewIFile(f *os.File, path string) (IFile, error) {
 	fi, err := f.Stat()
 	if err != nil {
 		return IFile{}, err
@@ -36,19 +30,10 @@ func NewIFile(path string) (IFile, error) {
 		}
 		abspath = filepath.Join(pwd, filepath.Dir(path))
 	}
-	chunks, err := ChunksFromFile(f, fi.Size())
-	if err != nil {
-		return IFile{}, err
-	}
-	h, err := NewHash(chunks)
-	if err != nil {
-		return IFile{}, err
-	}
 	ifile := IFile{
 		Name: fi.Name(),
 		Size: fi.Size(),
 		Dir:  abspath,
-		Hash: h.String(),
 	}
 	return ifile, nil
 }

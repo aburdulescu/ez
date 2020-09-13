@@ -67,7 +67,7 @@ func onLs(args ...string) error {
 				if err := json.Unmarshal(v, &i); err != nil {
 					return err
 				}
-				fmt.Printf("key=%s, value=%v\n", k, i)
+				fmt.Printf("%s %v\n", k, i)
 				return nil
 			})
 			if err != nil {
@@ -84,17 +84,30 @@ func onAdd(args ...string) error {
 		return fmt.Errorf("filepath wasn't provided")
 	}
 	path := args[0]
-	i, err := NewIFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	fmt.Println(i)
+	defer f.Close()
+	i, err := NewIFile(f, path)
+	if err != nil {
+		return err
+	}
+	chunks, err := ChunksFromFile(f, i.Size)
+	if err != nil {
+		return err
+	}
+	h, err := NewHash(chunks)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s %v\n", h, i)
 	var b bytes.Buffer
 	if err := json.NewEncoder(&b).Encode(&i); err != nil {
 		return err
 	}
 	err = db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(i.Name), b.Bytes())
+		return txn.Set([]byte(h.String()), b.Bytes())
 	})
 	return err
 }
