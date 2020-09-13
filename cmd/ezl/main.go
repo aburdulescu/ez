@@ -47,7 +47,15 @@ func onLs(args ...string) error {
 }
 
 func onAdd(args ...string) error {
-	fmt.Println("add")
+	if len(args) < 1 {
+		return fmt.Errorf("filepath wasn't provided")
+	}
+	path := args[0]
+	i, err := NewIFile(path)
+	if err != nil {
+		return err
+	}
+	fmt.Println(i)
 	return nil
 }
 
