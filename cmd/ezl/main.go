@@ -7,24 +7,26 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aburdulescu/go-ez/cli"
+
 	badger "github.com/dgraph-io/badger/v2"
 )
 
-var cli = NewCLI(os.Args[0], []Cmd{
-	Cmd{
-		name:    "ls",
-		desc:    "List available files",
-		handler: onLs,
+var c = cli.New(os.Args[0], []cli.Cmd{
+	cli.Cmd{
+		Name:    "ls",
+		Desc:    "List available files",
+		Handler: onLs,
 	},
-	Cmd{
-		name:    "add",
-		desc:    "Add a file",
-		handler: onAdd,
+	cli.Cmd{
+		Name:    "add",
+		Desc:    "Add a file",
+		Handler: onAdd,
 	},
-	Cmd{
-		name:    "rm",
-		desc:    "Remove a file",
-		handler: onRm,
+	cli.Cmd{
+		Name:    "rm",
+		Desc:    "Remove a file",
+		Handler: onRm,
 	},
 })
 
@@ -43,14 +45,14 @@ func main() {
 	defer db.Close()
 	name := args[0]
 	args = args[1:]
-	if err := cli.Handle(name, args); err != nil {
+	if err := c.Handle(name, args); err != nil {
 		handleErr(err)
 	}
 }
 
 func handleErr(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	cli.Usage()
+	c.Usage()
 	os.Exit(1)
 }
 
