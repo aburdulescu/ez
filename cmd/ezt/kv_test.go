@@ -4,6 +4,8 @@ import (
 	"log"
 	"sync"
 	"testing"
+
+	"github.com/aburdulescu/go-ez/ezt"
 )
 
 func TestAdd(t *testing.T) {
@@ -22,9 +24,9 @@ func add(kv *KV, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	input := map[string]Value{
-		"1": {Fileinfo{"a", 1, 1}, []string{"1", "2", "3"}},
-		"2": {Fileinfo{"b", 2, 2}, []string{"2", "3"}},
-		"3": {Fileinfo{"c", 3, 3}, []string{"3"}},
+		"1": {ezt.IFile{"a", "/a", 1}, []string{"1", "2", "3"}},
+		"2": {ezt.IFile{"b", "/b", 2}, []string{"2", "3"}},
+		"3": {ezt.IFile{"c", "/c", 3}, []string{"3"}},
 	}
 
 	expected := make(Values, len(input))
@@ -36,7 +38,7 @@ func add(kv *KV, wg *sync.WaitGroup) {
 
 	for k, v := range input {
 		for i := range v.Peers {
-			kv.Add(k, v.Fi, v.Peers[i])
+			kv.Add(k, v.IFile, v.Peers[i])
 		}
 	}
 
@@ -54,14 +56,14 @@ func TestDel(t *testing.T) {
 	kv := NewKV()
 
 	input := map[string]Value{
-		"1": {Fileinfo{"a", 1, 1}, []string{"1", "2", "3"}},
-		"2": {Fileinfo{"b", 2, 2}, []string{"2", "3"}},
-		"3": {Fileinfo{"c", 3, 3}, []string{"3"}},
+		"1": {ezt.IFile{"a", "/a", 1}, []string{"1", "2", "3"}},
+		"2": {ezt.IFile{"b", "/b", 2}, []string{"2", "3"}},
+		"3": {ezt.IFile{"c", "/c", 3}, []string{"3"}},
 	}
 
 	for k, v := range input {
 		for i := range v.Peers {
-			kv.Add(k, v.Fi, v.Peers[i])
+			kv.Add(k, v.IFile, v.Peers[i])
 		}
 	}
 
@@ -86,8 +88,8 @@ func del(kv *KV, wg *sync.WaitGroup) {
 	}
 
 	expected := Values{
-		{Fileinfo{"a", 1, 1}, []string{"1"}},
-		{Fileinfo{"b", 2, 2}, []string{"2"}},
+		{ezt.IFile{"a", "/a", 1}, []string{"1"}},
+		{ezt.IFile{"b", "/b", 2}, []string{"2"}},
 	}
 
 	for k, v := range input {
@@ -110,14 +112,14 @@ func TestGet(t *testing.T) {
 	kv := NewKV()
 
 	input := map[string]Value{
-		"1": {Fileinfo{"a", 1, 1}, []string{"1", "2", "3"}},
-		"2": {Fileinfo{"b", 2, 2}, []string{"2", "3"}},
-		"3": {Fileinfo{"c", 3, 3}, []string{"3"}},
+		"1": {ezt.IFile{"a", "/a", 1}, []string{"1", "2", "3"}},
+		"2": {ezt.IFile{"b", "/b", 2}, []string{"2", "3"}},
+		"3": {ezt.IFile{"c", "/c", 3}, []string{"3"}},
 	}
 
 	for k, v := range input {
 		for i := range v.Peers {
-			kv.Add(k, v.Fi, v.Peers[i])
+			kv.Add(k, v.IFile, v.Peers[i])
 		}
 	}
 
@@ -137,9 +139,9 @@ func get(kv *KV, wg *sync.WaitGroup) {
 
 	input := []string{"1", "2", "3", "key not found"}
 	expected := Values{
-		{Fileinfo{"a", 1, 1}, []string{"1", "2", "3"}},
-		{Fileinfo{"b", 2, 2}, []string{"2", "3"}},
-		{Fileinfo{"c", 3, 3}, []string{"3"}},
+		{ezt.IFile{"a", "/a", 1}, []string{"1", "2", "3"}},
+		{ezt.IFile{"b", "/b", 2}, []string{"2", "3"}},
+		{ezt.IFile{"c", "/c", 3}, []string{"3"}},
 	}
 	var result Values
 	for i := range input {
@@ -168,7 +170,7 @@ func (l Values) equals(r Values) bool {
 		for ; j < len(r); j++ {
 			lpeers := Peers(l[i].Peers)
 			rpeers := Peers(r[j].Peers)
-			if l[i].Fi.equals(r[j].Fi) && lpeers.equals(rpeers) {
+			if l[i].IFile.Equals(r[j].IFile) && lpeers.equals(rpeers) {
 				break
 			}
 		}
@@ -177,10 +179,6 @@ func (l Values) equals(r Values) bool {
 		}
 	}
 	return true
-}
-
-func (l Fileinfo) equals(r Fileinfo) bool {
-	return (l.Name == r.Name && l.Size == r.Size && l.PieceLength == r.PieceLength)
 }
 
 type Peers []string

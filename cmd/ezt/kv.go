@@ -3,23 +3,13 @@ package main
 import (
 	"fmt"
 	"sync"
+
+	"github.com/aburdulescu/go-ez/ezt"
 )
 
-type Fileinfo struct {
-	Name        string `json:"name"`
-	Size        int64  `json:"size"`
-	PieceLength int64  `json:"pieceLength"`
-}
-
 type Value struct {
-	Fi    Fileinfo `json:"fi"`
-	Peers []string `json:"peers"`
-}
-
-type GetAllResult struct {
-	Hash string `json:"hash"`
-	Name string `json:"name"`
-	Size int64  `json:"size"`
+	IFile ezt.IFile `json:"ifile"`
+	Peers []string  `json:"peers"`
 }
 
 type KV struct {
@@ -31,10 +21,10 @@ func NewKV() *KV {
 	return &KV{data: make(map[string]Value)}
 }
 
-func (kv *KV) Add(k string, fi Fileinfo, peer string) {
+func (kv *KV) Add(k string, ifile ezt.IFile, peer string) {
 	kv.mu.Lock()
 	v, ok := kv.data[k]
-	value := Value{Fi: fi}
+	value := Value{IFile: ifile}
 	if ok {
 		value.Peers = v.Peers
 		if findInSlice(v.Peers, peer) == -1 {
@@ -93,15 +83,15 @@ func (kv *KV) List() []Value {
 	return values
 }
 
-func (kv *KV) GetAll() []GetAllResult {
+func (kv *KV) GetAll() []ezt.GetAllResult {
 	kv.mu.RLock()
-	values := make([]GetAllResult, len(kv.data))
+	values := make([]ezt.GetAllResult, len(kv.data))
 	i := 0
 	for k, v := range kv.data {
-		values[i] = GetAllResult{
+		values[i] = ezt.GetAllResult{
 			Hash: k,
-			Name: v.Fi.Name,
-			Size: v.Fi.Size,
+			Name: v.IFile.Name,
+			Size: v.IFile.Size,
 		}
 		i++
 	}
@@ -114,7 +104,7 @@ func (kv *KV) Stat() uint64 {
 	kv.mu.RLock()
 	for k, v := range kv.data {
 		stat += uint64(len(k))
-		stat += uint64(len(v.Fi.Name) + 8 + 8)
+		stat += uint64(len(v.IFile.Name) + 8 + 8)
 		for i := range v.Peers {
 			stat += uint64(len(v.Peers[i]))
 		}

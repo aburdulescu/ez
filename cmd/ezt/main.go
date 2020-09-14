@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/aburdulescu/go-ez/ezt"
 )
 
 type Server struct {
@@ -59,22 +61,14 @@ func (s Server) handleGet(w http.ResponseWriter, r *http.Request) (int, error) {
 	return http.StatusOK, nil
 }
 
-type File struct {
-	Hash string   `json:"hash"`
-	Fi   Fileinfo `json:"fi"`
-}
-
 func (s Server) handlePost(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
-	params := struct {
-		Files []File `json:"files"`
-		Addr  string `json:"addr"`
-	}{}
+	var params ezt.PostParams
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		return http.StatusBadRequest, fmt.Errorf("could not decode body: %v", err.Error())
 	}
 	for i := range params.Files {
-		s.c.Add(params.Files[i].Hash, params.Files[i].Fi, params.Addr)
+		s.c.Add(params.Files[i].Hash, params.Files[i].IFile, params.Addr)
 	}
 	return http.StatusOK, nil
 }
