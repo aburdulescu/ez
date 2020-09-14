@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
@@ -63,11 +64,20 @@ func onLs(args ...string) error {
 			item := it.Item()
 			k := item.Key()
 			err := item.Value(func(v []byte) error {
-				var i IFile
-				if err := json.Unmarshal(v, &i); err != nil {
-					return err
+				kstr := string(k)
+				if strings.HasSuffix(kstr, "ifile") {
+					var i IFile
+					if err := json.Unmarshal(v, &i); err != nil {
+						return err
+					}
+					fmt.Printf("%s %v\n", k, i)
+				} else if strings.HasSuffix(kstr, "chunks") {
+					var c []Hash
+					if err := json.Unmarshal(v, &c); err != nil {
+						return err
+					}
+					fmt.Printf("%s %v\n", k, len(c))
 				}
-				fmt.Printf("%s %v\n", k, i)
 				return nil
 			})
 			if err != nil {
@@ -101,13 +111,21 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	var b bytes.Buffer
-	if err := json.NewEncoder(&b).Encode(&i); err != nil {
+	var ifileBuf bytes.Buffer
+	if err := json.NewEncoder(&ifileBuf).Encode(&i); err != nil {
+		return err
+	}
+	var chunksBuf bytes.Buffer
+	if err := json.NewEncoder(&chunksBuf).Encode(&chunks); err != nil {
 		return err
 	}
 	k := HASH_ALG + "-" + h.String()
 	err = db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(k), b.Bytes())
+		err := txn.Set([]byte(k+".ifile"), ifileBuf.Bytes())
+		if err != nil {
+			return err
+		}
+		err = txn.Set([]byte(k+".chunks"), chunksBuf.Bytes())
 		if err != nil {
 			return err
 		}
@@ -126,8 +144,12 @@ func onRm(args ...string) error {
 	}
 	id := args[0]
 	err := db.Update(func(txn *badger.Txn) error {
-		err := txn.Delete([]byte(id))
-		if err != nil {
+		ifileKey := id + ".ifile"
+		if err := txn.Delete([]byte(ifileKey)); err != nil {
+			return err
+		}
+		chunksKey := id + ".chunks"
+		if err := txn.Delete([]byte(chunksKey)); err != nil {
 			return err
 		}
 		return nil
