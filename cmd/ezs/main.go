@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
@@ -15,12 +17,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	db, err := badger.Open(badger.DefaultOptions("../ezl/db").WithLogger(nil))
+	opts := badger.DefaultOptions("../ezl/db").WithLogger(nil).WithReadOnly(true)
+	db, err := badger.Open(opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go handleCtrlC(c, db)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -32,4 +37,10 @@ func main() {
 		}
 		go c.run(db)
 	}
+}
+
+func handleCtrlC(c chan os.Signal, db *badger.DB) {
+	<-c
+	db.Close()
+	os.Exit(0)
 }
