@@ -213,7 +213,8 @@ func onSync(args ...string) error {
 					if err := json.Unmarshal(v, &i); err != nil {
 						return err
 					}
-					files = append(files, ezt.File{Hash: kstr, IFile: i})
+					id := strings.Split(kstr, ".")[0]
+					files = append(files, ezt.File{Hash: id, IFile: i})
 				}
 				return nil
 			})
