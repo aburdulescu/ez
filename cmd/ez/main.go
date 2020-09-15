@@ -14,7 +14,6 @@ import (
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezs"
 	"github.com/aburdulescu/go-ez/ezt"
-	"github.com/aburdulescu/go-ez/hash"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -69,8 +68,8 @@ func onGet(args ...string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("id wasn't provided")
 	}
-	idStr := args[0]
-	rsp, err := http.Get("http://localhost:8080/?hash=" + idStr)
+	id := args[0]
+	rsp, err := http.Get("http://localhost:8080/?hash=" + id)
 	if err != nil {
 		return err
 	}
@@ -98,17 +97,15 @@ func onGet(args ...string) error {
 			// add remainder chunks to one(or more) peers
 		}
 	}
-	id, err := hash.FromString(idStr)
-	if err != nil {
-		return err
-	}
+
 	if err := fetch(r.IFile.Name, id); err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func fetch(name string, id []byte) error {
+func fetch(name string, id string) error {
 	conn, err := net.Dial("tcp", ":8081")
 	if err != nil {
 		return err
@@ -118,12 +115,20 @@ func fetch(name string, id []byte) error {
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
 	}
+	_, err = sendReq(conn, req)
+	if err != nil {
+		return err
+	}
+	req = &ezs.Request{
+		Type:    ezs.RequestType_GETCHUNK,
+		Payload: &ezs.Request_Index{0},
+	}
 	rsp, err := sendReq(conn, req)
 	if err != nil {
 		return err
 	}
 	chunkHash := rsp.GetHash()
-	fmt.Println(chunkHash)
+	fmt.Printf("%s\n", chunkHash)
 	b := make([]byte, 10240)
 	exit := false
 	buf := new(bytes.Buffer)

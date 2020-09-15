@@ -14,7 +14,7 @@ import (
 )
 
 type Client struct {
-	id   []byte
+	id   string
 	conn net.Conn
 	db   badger.DB
 }
@@ -36,11 +36,11 @@ func (c Client) run(db *badger.DB) {
 		switch reqType {
 		case ezs.RequestType_CONNECT:
 			c.id = req.GetId()
-			if err := c.handleConnect(req.GetId()); err != nil {
+			if err := c.handleConnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_DISCONNECT:
-			c.id = nil
+			c.id = ""
 			if err := c.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
@@ -81,7 +81,7 @@ func (c Client) recv(b []byte) (*ezs.Request, error) {
 	return req, nil
 }
 
-func (c Client) handleConnect(id []byte) error {
+func (c Client) handleConnect() error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},

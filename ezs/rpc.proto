@@ -13,7 +13,7 @@ enum RequestType {
 message Request {
     RequestType type = 1;
     oneof payload {
-        bytes id = 2;
+        string id = 2;
         uint64 index = 3;
         bool dummy = 4;
     }
