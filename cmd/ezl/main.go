@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/go-ez/hash"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
@@ -76,7 +78,7 @@ func onLs(args ...string) error {
 					}
 					fmt.Printf("%s %v\n", k, i)
 				} else if strings.HasSuffix(kstr, "chunks") {
-					var c []Hash
+					var c []hash.Hash
 					if err := json.Unmarshal(v, &c); err != nil {
 						return err
 					}
@@ -107,11 +109,11 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	chunks, err := ChunksFromFile(f, i.Size)
+	chunks, err := chunks.FromFile(f, i.Size)
 	if err != nil {
 		return err
 	}
-	h, err := NewHash(chunks)
+	h, err := hash.New(chunks)
 	if err != nil {
 		return err
 	}
@@ -123,7 +125,7 @@ func onAdd(args ...string) error {
 	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
 		return err
 	}
-	k := HASH_ALG + "-" + h.String()
+	k := hash.HASH_ALG + "-" + h.String()
 	err = db.Update(func(txn *badger.Txn) error {
 		err := txn.Set([]byte(k+".ifile"), ifileBuf.Bytes())
 		if err != nil {

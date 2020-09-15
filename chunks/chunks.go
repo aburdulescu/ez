@@ -1,23 +1,25 @@
-package main
+package chunks
 
 import (
 	"crypto/sha1"
 	"io"
 	"math"
 	"os"
+
+	"github.com/aburdulescu/go-ez/hash"
 )
 
 const PIECE_SIZE = 8 << 10
 const CHUNK_SIZE = PIECE_SIZE << 10
 
-func ChunksFromFile(f *os.File, size int64) ([]Hash, error) {
+func FromFile(f *os.File, size int64) ([]hash.Hash, error) {
 	remainder := size % CHUNK_SIZE
 	leftover := int64(0)
 	if remainder != 0 {
 		leftover = int64(1)
 	}
 	nchunks := int64(math.Ceil(float64(size) / float64(CHUNK_SIZE)))
-	chunks := make([]Hash, nchunks)
+	chunks := make([]hash.Hash, nchunks)
 	h := sha1.New()
 	for i := int64(0); i < nchunks-leftover; i++ {
 		_, err := io.CopyN(h, f, CHUNK_SIZE)

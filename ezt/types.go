@@ -15,3 +15,8 @@ type PostParams struct {
 	Files []File `json:"files"`
 	Addr  string `json:"addr"`
 }
+
+type GetResult struct {
+	IFile IFile    `json:"ifile"`
+	Peers []string `json:"peers"`
+}

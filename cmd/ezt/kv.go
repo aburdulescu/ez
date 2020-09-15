@@ -7,10 +7,7 @@ import (
 	"github.com/aburdulescu/go-ez/ezt"
 )
 
-type Value struct {
-	IFile ezt.IFile `json:"ifile"`
-	Peers []string  `json:"peers"`
-}
+type Value ezt.GetResult
 
 type KV struct {
 	mu   sync.RWMutex

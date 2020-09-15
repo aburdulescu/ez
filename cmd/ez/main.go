@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 
+	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezt"
 )
@@ -58,5 +60,38 @@ func onLs(args ...string) error {
 }
 
 func onGet(args ...string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("id wasn't provided")
+	}
+	id := args[0]
+	rsp, err := http.Get("http://localhost:8080/?hash=" + id)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	r := &ezt.GetResult{}
+	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
+		return err
+	}
+	fmt.Println(r)
+
+	peersLen := uint64(len(r.Peers))
+	nchunks := uint64(math.Ceil(float64(r.IFile.Size) / float64(chunks.CHUNK_SIZE)))
+	if nchunks <= peersLen {
+		// select nchunks number of peers if available
+		// ex: nchunks=10, npeers=20 => select 10 peers from the list and get from each one chunk
+		nchunksPerPeer := 1
+		fmt.Printf("nchunks=%d, chunksPerPeer=%d\n", nchunks, nchunksPerPeer)
+	} else {
+		// split the chunks between the available peers
+		// ex: nchunks=41, npeers=3 => split chunks between the 3 peers: peer1=13, peer2=13, peer3=15
+		nchunksPerPeer := nchunks / peersLen
+		remainder := nchunks % peersLen
+		fmt.Printf("nchunks=%d, chunksPerPeer=%d, remainder=%d\n", nchunks, nchunksPerPeer, remainder)
+		if remainder != 0 {
+			// add remainder chunks to one(or more) peers
+		}
+	}
+
 	return nil
 }

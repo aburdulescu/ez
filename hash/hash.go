@@ -1,4 +1,4 @@
-package main
+package hash
 
 import (
 	"crypto/sha1"
@@ -9,7 +9,7 @@ const HASH_ALG = "sha1"
 
 type Hash []byte
 
-func NewHash(chunks []Hash) (Hash, error) {
+func New(chunks []Hash) (Hash, error) {
 	h := sha1.New()
 	for i := range chunks {
 		if _, err := h.Write(chunks[i]); err != nil {
@@ -23,7 +23,7 @@ func (h Hash) String() string {
 	return hex.EncodeToString(h)
 }
 
-func NewHashFromString(s string) (Hash, error) {
+func FromString(s string) (Hash, error) {
 	h, err := hex.DecodeString(s)
 	if err != nil {
 		return nil, err
