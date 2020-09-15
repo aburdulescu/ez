@@ -3,33 +3,34 @@ syntax = "proto3";
 option go_package = "github.com/aburdulescu/go-ez/ezs";
 
 enum RequestType {
-  CONNECT = 0;
-  DISCONNECT = 1;
-  GETCHUNK = 2;
-  GETPIECE = 3;
+    CONNECT = 0;
+    DISCONNECT = 1;
+    GETCHUNK = 2;
+    GETPIECE = 3;
 }
 
 
 message Request {
-  RequestType type = 1;
-  oneof payload {
-    bytes id = 2;
-    uint64 index = 3;
-    bool dummy = 4;
-  }
+    RequestType type = 1;
+    oneof payload {
+        bytes id = 2;
+        uint64 index = 3;
+        bool dummy = 4;
+    }
 }
 
 enum ResponseType {
-  ACK = 0;
-  CHUNKHASH = 1;
-  PIECE = 2;
+    ACK = 0;
+    CHUNKHASH = 1;
+    PIECE = 2;
+    CHUNKEND = 3;
 }
 
 message Response {
-  ResponseType type = 1;
-  oneof payload {
-    bytes hash = 2;
-    bytes piece = 3;
-    bool dummy = 4;
-  }
+    ResponseType type = 1;
+    oneof payload {
+        bytes hash = 2;
+        bytes piece = 3;
+        bool dummy = 4;
+    }
 }
