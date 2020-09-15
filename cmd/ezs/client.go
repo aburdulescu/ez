@@ -1,20 +1,25 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net"
 
 	"github.com/aburdulescu/go-ez/ezs"
+	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/go-ez/hash"
+	badger "github.com/dgraph-io/badger/v2"
 	"google.golang.org/protobuf/proto"
 )
 
 type Client struct {
 	id   []byte
 	conn net.Conn
+	db   badger.DB
 }
 
-func (c Client) run() {
+func (c Client) run(db *badger.DB) {
 	defer c.conn.Close()
 	remAddr := c.conn.RemoteAddr().String()
 	b := make([]byte, 8192)
@@ -99,9 +104,13 @@ func (c Client) handleDisconnect() error {
 }
 
 func (c Client) handleGetchunk(index uint64) error {
+	chunkHashes, err := c.getChunkHashes()
+	if err != nil {
+		return err
+	}
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_CHUNKHASH,
-		Payload: &ezs.Response_Hash{[]byte("chankhash")},
+		Payload: &ezs.Response_Hash{[]byte(chunkHashes[index])},
 	}
 	if err := c.send(rsp); err != nil {
 		return err
@@ -118,4 +127,42 @@ func (c Client) handleGetpiece(index uint64) error {
 		return err
 	}
 	return nil
+}
+
+func (c Client) getIFile() (ezt.IFile, error) {
+	var i ezt.IFile
+	err := c.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(string(c.id) + ".ifile"))
+		if err != nil {
+			return err
+		}
+		v, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(v, &i); err != nil {
+			return err
+		}
+		return nil
+	})
+	return i, err
+}
+
+func (c Client) getChunkHashes() ([]hash.Hash, error) {
+	var hashes []hash.Hash
+	err := c.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(string(c.id) + ".chunks"))
+		if err != nil {
+			return err
+		}
+		v, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(v, &hashes); err != nil {
+			return err
+		}
+		return nil
+	})
+	return hashes, err
 }
