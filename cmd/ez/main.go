@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/aburdulescu/go-ez/cli"
+	"github.com/aburdulescu/go-ez/ezt"
 )
 
 var c = cli.New(os.Args[0], []cli.Cmd{
@@ -39,6 +42,18 @@ func handleErr(err error) {
 }
 
 func onLs(args ...string) error {
+	rsp, err := http.Get("http://localhost:8080/?hash=all")
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	var files []ezt.GetAllResult
+	if err := json.NewDecoder(rsp.Body).Decode(&files); err != nil {
+		return err
+	}
+	for _, f := range files {
+		fmt.Println(f)
+	}
 	return nil
 }
 
