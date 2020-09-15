@@ -53,8 +53,18 @@ func handleConn(conn net.Conn) {
 			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 		}
 	case ezs.RequestType_DISCONNECT:
+		if err := handleDisconnect(conn); err != nil {
+			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+		}
+
 	case ezs.RequestType_GETCHUNK:
+		if err := handleGetchunk(conn, req.GetIndex()); err != nil {
+			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+		}
 	case ezs.RequestType_GETPIECE:
+		if err := handleGetpiece(conn, req.GetIndex()); err != nil {
+			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+		}
 	default:
 		log.Printf("%s: error: unknown request type %v\n", conn.RemoteAddr(), reqType)
 	}
@@ -63,7 +73,52 @@ func handleConn(conn net.Conn) {
 func handleConnect(conn net.Conn, id []byte) error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_ACK,
-		Payload: &ezs.Response_Dummy{false},
+		Payload: &ezs.Response_Dummy{},
+	}
+	b, err := proto.Marshal(rsp)
+	if err != nil {
+		return err
+	}
+	if _, err := conn.Write(b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func handleDisconnect(conn net.Conn) error {
+	rsp := &ezs.Response{
+		Type:    ezs.ResponseType_ACK,
+		Payload: &ezs.Response_Dummy{},
+	}
+	b, err := proto.Marshal(rsp)
+	if err != nil {
+		return err
+	}
+	if _, err := conn.Write(b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func handleGetchunk(conn net.Conn, index uint64) error {
+	rsp := &ezs.Response{
+		Type:    ezs.ResponseType_CHUNKHASH,
+		Payload: &ezs.Response_Hash{[]byte("chankhash")},
+	}
+	b, err := proto.Marshal(rsp)
+	if err != nil {
+		return err
+	}
+	if _, err := conn.Write(b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func handleGetpiece(conn net.Conn, index uint64) error {
+	rsp := &ezs.Response{
+		Type:    ezs.ResponseType_PIECE,
+		Payload: &ezs.Response_Piece{[]byte("piece")},
 	}
 	b, err := proto.Marshal(rsp)
 	if err != nil {
