@@ -32,6 +32,11 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 		Desc:    "Remove a file",
 		Handler: onRm,
 	},
+	cli.Cmd{
+		Name:    "sync",
+		Desc:    "Send all available files to the tracker",
+		Handler: onSync,
+	},
 })
 
 var db *badger.DB
@@ -184,6 +189,52 @@ func onRm(args ...string) error {
 	}
 	client := http.DefaultClient
 	rsp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	return nil
+}
+
+func onSync(args ...string) error {
+	var files []ezt.File
+	err := db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			err := item.Value(func(v []byte) error {
+				kstr := string(k)
+				if strings.HasSuffix(kstr, "ifile") {
+					var i ezt.IFile
+					if err := json.Unmarshal(v, &i); err != nil {
+						return err
+					}
+					files = append(files, ezt.File{Hash: kstr, IFile: i})
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	params := ezt.PostParams{
+		Files: files,
+		Addr:  "localhost:22334",
+	}
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(params); err != nil {
+		return err
+	}
+	rsp, err := http.Post("http://localhost:8080/", "application/json", buf)
 	if err != nil {
 		return err
 	}
