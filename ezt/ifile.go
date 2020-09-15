@@ -1,4 +1,4 @@
-package main
+package ezt
 
 import (
 	"fmt"
@@ -36,4 +36,8 @@ func NewIFile(f *os.File, path string) (IFile, error) {
 		Dir:  abspath,
 	}
 	return ifile, nil
+}
+
+func (l IFile) Equals(r IFile) bool {
+	return (l.Name == r.Name && l.Size == r.Size && l.Dir == r.Dir)
 }

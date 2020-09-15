@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/aburdulescu/go-ez/cli"
+	"github.com/aburdulescu/go-ez/ezt"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
@@ -68,7 +70,7 @@ func onLs(args ...string) error {
 			err := item.Value(func(v []byte) error {
 				kstr := string(k)
 				if strings.HasSuffix(kstr, "ifile") {
-					var i IFile
+					var i ezt.IFile
 					if err := json.Unmarshal(v, &i); err != nil {
 						return err
 					}
@@ -101,7 +103,7 @@ func onAdd(args ...string) error {
 		return err
 	}
 	defer f.Close()
-	i, err := NewIFile(f, path)
+	i, err := ezt.NewIFile(f, path)
 	if err != nil {
 		return err
 	}
@@ -113,12 +115,12 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	var ifileBuf bytes.Buffer
-	if err := json.NewEncoder(&ifileBuf).Encode(&i); err != nil {
+	ifileBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
 		return err
 	}
-	var chunksBuf bytes.Buffer
-	if err := json.NewEncoder(&chunksBuf).Encode(&chunks); err != nil {
+	chunksBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
 		return err
 	}
 	k := HASH_ALG + "-" + h.String()
@@ -136,7 +138,22 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s %v\n", k, i)
+	fmt.Println(k)
+	params := ezt.PostParams{
+		Files: []ezt.File{
+			ezt.File{Hash: k, IFile: i},
+		},
+		Addr: "localhost:22334",
+	}
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(params); err != nil {
+		return err
+	}
+	rsp, err := http.Post("http://localhost:8080/", "application/json", buf)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
 	return nil
 }
 
@@ -159,5 +176,15 @@ func onRm(args ...string) error {
 	if err != nil {
 		return err
 	}
+	req, err := http.NewRequest("DELETE", "http://localhost:8080/?hash="+id+"&addr=localhost:22334", nil)
+	if err != nil {
+		return err
+	}
+	client := http.DefaultClient
+	rsp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
 	return nil
 }
