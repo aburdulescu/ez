@@ -22,7 +22,7 @@ func main() {
 			log.Println(err)
 			continue
 		}
-		go handleConn(conn)
+		go handleClient(conn)
 	}
 }
 
@@ -31,42 +31,43 @@ func handleErr(err error) {
 	os.Exit(1)
 }
 
-func handleConn(conn net.Conn) {
+func handleClient(conn net.Conn) {
 	defer conn.Close()
 	b := make([]byte, 8192)
-	n, err := conn.Read(b)
-	if err == io.EOF {
-		log.Printf("%s: closed the connection\n", conn.RemoteAddr())
-		return
-	}
-	if err != nil {
-		log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
-	}
-	req := &ezs.Request{}
-	if err := proto.Unmarshal(b[:n], req); err != nil {
-		log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
-	}
-	reqType := req.GetType()
-	switch reqType {
-	case ezs.RequestType_CONNECT:
-		if err := handleConnect(conn, req.GetId()); err != nil {
+	for {
+		n, err := conn.Read(b)
+		if err == io.EOF {
+			log.Printf("%s: closed the connection\n", conn.RemoteAddr())
+			return
+		}
+		if err != nil {
 			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 		}
-	case ezs.RequestType_DISCONNECT:
-		if err := handleDisconnect(conn); err != nil {
+		req := &ezs.Request{}
+		if err := proto.Unmarshal(b[:n], req); err != nil {
 			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 		}
-
-	case ezs.RequestType_GETCHUNK:
-		if err := handleGetchunk(conn, req.GetIndex()); err != nil {
-			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+		reqType := req.GetType()
+		switch reqType {
+		case ezs.RequestType_CONNECT:
+			if err := handleConnect(conn, req.GetId()); err != nil {
+				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+			}
+		case ezs.RequestType_DISCONNECT:
+			if err := handleDisconnect(conn); err != nil {
+				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+			}
+		case ezs.RequestType_GETCHUNK:
+			if err := handleGetchunk(conn, req.GetIndex()); err != nil {
+				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+			}
+		case ezs.RequestType_GETPIECE:
+			if err := handleGetpiece(conn, req.GetIndex()); err != nil {
+				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
+			}
+		default:
+			log.Printf("%s: error: unknown request type %v\n", conn.RemoteAddr(), reqType)
 		}
-	case ezs.RequestType_GETPIECE:
-		if err := handleGetpiece(conn, req.GetIndex()); err != nil {
-			log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
-		}
-	default:
-		log.Printf("%s: error: unknown request type %v\n", conn.RemoteAddr(), reqType)
 	}
 }
 

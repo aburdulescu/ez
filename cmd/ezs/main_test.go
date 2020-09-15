@@ -27,8 +27,13 @@ func TestConnect(t *testing.T) {
 			Payload: &ezs.Request_Index{42},
 		},
 	}
+	conn, err := net.Dial("tcp", ":8081")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
 	for _, req := range requests {
-		rsp, err := sendReq(req)
+		rsp, err := sendReq(conn, req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -36,12 +41,7 @@ func TestConnect(t *testing.T) {
 	}
 }
 
-func sendReq(req *ezs.Request) (*ezs.Response, error) {
-	conn, err := net.Dial("tcp", ":8081")
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
+func sendReq(conn net.Conn, req *ezs.Request) (*ezs.Response, error) {
 	writeBuf, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
