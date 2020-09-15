@@ -17,7 +17,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	opts := badger.DefaultOptions("../ezl/db").WithLogger(nil).WithReadOnly(true)
+	opts := badger.DefaultOptions("../ezl/db").WithLogger(nil).WithReadOnly(true).WithBypassLockGuard(true)
 	db, err := badger.Open(opts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
