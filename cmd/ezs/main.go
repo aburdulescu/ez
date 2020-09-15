@@ -14,7 +14,8 @@ import (
 func main() {
 	ln, err := net.Listen("tcp", ":8081")
 	if err != nil {
-		handleErr(err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 	for {
 		conn, err := ln.Accept()
@@ -26,13 +27,16 @@ func main() {
 	}
 }
 
-func handleErr(err error) {
-	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	os.Exit(1)
+type Client struct {
+	id   []byte
+	conn net.Conn
 }
 
 func handleClient(conn net.Conn) {
 	defer conn.Close()
+	c := Client{
+		conn: conn,
+	}
 	b := make([]byte, 8192)
 	for {
 		n, err := conn.Read(b)
@@ -50,19 +54,21 @@ func handleClient(conn net.Conn) {
 		reqType := req.GetType()
 		switch reqType {
 		case ezs.RequestType_CONNECT:
-			if err := handleConnect(conn, req.GetId()); err != nil {
+			c.id = req.GetId()
+			if err := c.handleConnect(req.GetId()); err != nil {
 				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 			}
 		case ezs.RequestType_DISCONNECT:
-			if err := handleDisconnect(conn); err != nil {
+			c.id = nil
+			if err := c.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 			}
 		case ezs.RequestType_GETCHUNK:
-			if err := handleGetchunk(conn, req.GetIndex()); err != nil {
+			if err := c.handleGetchunk(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 			}
 		case ezs.RequestType_GETPIECE:
-			if err := handleGetpiece(conn, req.GetIndex()); err != nil {
+			if err := c.handleGetpiece(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", conn.RemoteAddr(), err)
 			}
 		default:
@@ -71,7 +77,7 @@ func handleClient(conn net.Conn) {
 	}
 }
 
-func handleConnect(conn net.Conn, id []byte) error {
+func (c Client) handleConnect(id []byte) error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
@@ -80,13 +86,13 @@ func handleConnect(conn net.Conn, id []byte) error {
 	if err != nil {
 		return err
 	}
-	if _, err := conn.Write(b); err != nil {
+	if _, err := c.conn.Write(b); err != nil {
 		return err
 	}
 	return nil
 }
 
-func handleDisconnect(conn net.Conn) error {
+func (c Client) handleDisconnect() error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
@@ -95,13 +101,13 @@ func handleDisconnect(conn net.Conn) error {
 	if err != nil {
 		return err
 	}
-	if _, err := conn.Write(b); err != nil {
+	if _, err := c.conn.Write(b); err != nil {
 		return err
 	}
 	return nil
 }
 
-func handleGetchunk(conn net.Conn, index uint64) error {
+func (c Client) handleGetchunk(index uint64) error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_CHUNKHASH,
 		Payload: &ezs.Response_Hash{[]byte("chankhash")},
@@ -110,13 +116,13 @@ func handleGetchunk(conn net.Conn, index uint64) error {
 	if err != nil {
 		return err
 	}
-	if _, err := conn.Write(b); err != nil {
+	if _, err := c.conn.Write(b); err != nil {
 		return err
 	}
 	return nil
 }
 
-func handleGetpiece(conn net.Conn, index uint64) error {
+func (c Client) handleGetpiece(index uint64) error {
 	rsp := &ezs.Response{
 		Type:    ezs.ResponseType_PIECE,
 		Payload: &ezs.Response_Piece{[]byte("piece")},
@@ -125,7 +131,7 @@ func handleGetpiece(conn net.Conn, index uint64) error {
 	if err != nil {
 		return err
 	}
-	if _, err := conn.Write(b); err != nil {
+	if _, err := c.conn.Write(b); err != nil {
 		return err
 	}
 	return nil
