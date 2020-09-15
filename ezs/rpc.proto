@@ -2,45 +2,34 @@ syntax = "proto3";
 
 option go_package = "github.com/aburdulescu/go-ez/ezs";
 
-enum Op {
+enum RequestType {
   CONNECT = 0;
   DISCONNECT = 1;
   GETCHUNK = 2;
   GETPIECE = 3;
-  ACK = 4;
-  CHUNKHASH = 5;
-  PIECE = 6;
 }
 
-message Connect {
-  Op op = 1;
-  bytes id = 2;
+
+message Request {
+  RequestType type = 1;
+  oneof payload {
+    bytes id = 2;
+    uint64 index = 3;
+    bool dummy = 4;
+  }
 }
 
-message Disconnect {
-  Op op = 1;
+enum ResponseType {
+  ACK = 0;
+  CHUNKHASH = 1;
+  PIECE = 2;
 }
 
-message Getchunk {
-  Op op = 1;
-  uint64 index = 2;
-}
-
-message Getpiece {
-  Op op = 1;
-  uint64 index = 2;
-}
-
-message Ack {
-  Op op = 1;
-}
-
-message Chunkhash {
-  Op op = 1;
-  bytes hash = 2;
-}
-
-message Piece {
-  Op op = 1;
-  bytes piece = 2;
+message Response {
+  ResponseType type = 1;
+  oneof payload {
+    bytes hash = 2;
+    bytes piece = 3;
+    bool dummy = 4;
+  }
 }

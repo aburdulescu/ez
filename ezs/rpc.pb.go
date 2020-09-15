@@ -25,78 +25,122 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
-type Op int32
+type RequestType int32
 
 const (
-	Op_CONNECT    Op = 0
-	Op_DISCONNECT Op = 1
-	Op_GETCHUNK   Op = 2
-	Op_GETPIECE   Op = 3
-	Op_ACK        Op = 4
-	Op_CHUNKHASH  Op = 5
-	Op_PIECE      Op = 6
+	RequestType_CONNECT    RequestType = 0
+	RequestType_DISCONNECT RequestType = 1
+	RequestType_GETCHUNK   RequestType = 2
+	RequestType_GETPIECE   RequestType = 3
 )
 
-// Enum value maps for Op.
+// Enum value maps for RequestType.
 var (
-	Op_name = map[int32]string{
+	RequestType_name = map[int32]string{
 		0: "CONNECT",
 		1: "DISCONNECT",
 		2: "GETCHUNK",
 		3: "GETPIECE",
-		4: "ACK",
-		5: "CHUNKHASH",
-		6: "PIECE",
 	}
-	Op_value = map[string]int32{
+	RequestType_value = map[string]int32{
 		"CONNECT":    0,
 		"DISCONNECT": 1,
 		"GETCHUNK":   2,
 		"GETPIECE":   3,
-		"ACK":        4,
-		"CHUNKHASH":  5,
-		"PIECE":      6,
 	}
 )
 
-func (x Op) Enum() *Op {
-	p := new(Op)
+func (x RequestType) Enum() *RequestType {
+	p := new(RequestType)
 	*p = x
 	return p
 }
 
-func (x Op) String() string {
+func (x RequestType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (Op) Descriptor() protoreflect.EnumDescriptor {
+func (RequestType) Descriptor() protoreflect.EnumDescriptor {
 	return file_rpc_proto_enumTypes[0].Descriptor()
 }
 
-func (Op) Type() protoreflect.EnumType {
+func (RequestType) Type() protoreflect.EnumType {
 	return &file_rpc_proto_enumTypes[0]
 }
 
-func (x Op) Number() protoreflect.EnumNumber {
+func (x RequestType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use Op.Descriptor instead.
-func (Op) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use RequestType.Descriptor instead.
+func (RequestType) EnumDescriptor() ([]byte, []int) {
 	return file_rpc_proto_rawDescGZIP(), []int{0}
 }
 
-type Connect struct {
+type ResponseType int32
+
+const (
+	ResponseType_ACK       ResponseType = 0
+	ResponseType_CHUNKHASH ResponseType = 1
+	ResponseType_PIECE     ResponseType = 2
+)
+
+// Enum value maps for ResponseType.
+var (
+	ResponseType_name = map[int32]string{
+		0: "ACK",
+		1: "CHUNKHASH",
+		2: "PIECE",
+	}
+	ResponseType_value = map[string]int32{
+		"ACK":       0,
+		"CHUNKHASH": 1,
+		"PIECE":     2,
+	}
+)
+
+func (x ResponseType) Enum() *ResponseType {
+	p := new(ResponseType)
+	*p = x
+	return p
+}
+
+func (x ResponseType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ResponseType) Descriptor() protoreflect.EnumDescriptor {
+	return file_rpc_proto_enumTypes[1].Descriptor()
+}
+
+func (ResponseType) Type() protoreflect.EnumType {
+	return &file_rpc_proto_enumTypes[1]
+}
+
+func (x ResponseType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ResponseType.Descriptor instead.
+func (ResponseType) EnumDescriptor() ([]byte, []int) {
+	return file_rpc_proto_rawDescGZIP(), []int{1}
+}
+
+type Request struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Op Op     `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-	Id []byte `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Type RequestType `protobuf:"varint,1,opt,name=type,proto3,enum=RequestType" json:"type,omitempty"`
+	// Types that are assignable to Payload:
+	//	*Request_Id
+	//	*Request_Index
+	//	*Request_Dummy
+	Payload isRequest_Payload `protobuf_oneof:"payload"`
 }
 
-func (x *Connect) Reset() {
-	*x = Connect{}
+func (x *Request) Reset() {
+	*x = Request{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_rpc_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -104,13 +148,13 @@ func (x *Connect) Reset() {
 	}
 }
 
-func (x *Connect) String() string {
+func (x *Request) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Connect) ProtoMessage() {}
+func (*Request) ProtoMessage() {}
 
-func (x *Connect) ProtoReflect() protoreflect.Message {
+func (x *Request) ProtoReflect() protoreflect.Message {
 	mi := &file_rpc_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -122,35 +166,83 @@ func (x *Connect) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Connect.ProtoReflect.Descriptor instead.
-func (*Connect) Descriptor() ([]byte, []int) {
+// Deprecated: Use Request.ProtoReflect.Descriptor instead.
+func (*Request) Descriptor() ([]byte, []int) {
 	return file_rpc_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Connect) GetOp() Op {
+func (x *Request) GetType() RequestType {
 	if x != nil {
-		return x.Op
+		return x.Type
 	}
-	return Op_CONNECT
+	return RequestType_CONNECT
 }
 
-func (x *Connect) GetId() []byte {
-	if x != nil {
+func (m *Request) GetPayload() isRequest_Payload {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
+func (x *Request) GetId() []byte {
+	if x, ok := x.GetPayload().(*Request_Id); ok {
 		return x.Id
 	}
 	return nil
 }
 
-type Disconnect struct {
+func (x *Request) GetIndex() uint64 {
+	if x, ok := x.GetPayload().(*Request_Index); ok {
+		return x.Index
+	}
+	return 0
+}
+
+func (x *Request) GetDummy() bool {
+	if x, ok := x.GetPayload().(*Request_Dummy); ok {
+		return x.Dummy
+	}
+	return false
+}
+
+type isRequest_Payload interface {
+	isRequest_Payload()
+}
+
+type Request_Id struct {
+	Id []byte `protobuf:"bytes,2,opt,name=id,proto3,oneof"`
+}
+
+type Request_Index struct {
+	Index uint64 `protobuf:"varint,3,opt,name=index,proto3,oneof"`
+}
+
+type Request_Dummy struct {
+	Dummy bool `protobuf:"varint,4,opt,name=dummy,proto3,oneof"`
+}
+
+func (*Request_Id) isRequest_Payload() {}
+
+func (*Request_Index) isRequest_Payload() {}
+
+func (*Request_Dummy) isRequest_Payload() {}
+
+type Response struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Op Op `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
+	Type ResponseType `protobuf:"varint,1,opt,name=type,proto3,enum=ResponseType" json:"type,omitempty"`
+	// Types that are assignable to Payload:
+	//	*Response_Hash
+	//	*Response_Piece
+	//	*Response_Dummy
+	Payload isResponse_Payload `protobuf_oneof:"payload"`
 }
 
-func (x *Disconnect) Reset() {
-	*x = Disconnect{}
+func (x *Response) Reset() {
+	*x = Response{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_rpc_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -158,13 +250,13 @@ func (x *Disconnect) Reset() {
 	}
 }
 
-func (x *Disconnect) String() string {
+func (x *Response) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Disconnect) ProtoMessage() {}
+func (*Response) ProtoMessage() {}
 
-func (x *Disconnect) ProtoReflect() protoreflect.Message {
+func (x *Response) ProtoReflect() protoreflect.Message {
 	mi := &file_rpc_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -176,318 +268,98 @@ func (x *Disconnect) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Disconnect.ProtoReflect.Descriptor instead.
-func (*Disconnect) Descriptor() ([]byte, []int) {
+// Deprecated: Use Response.ProtoReflect.Descriptor instead.
+func (*Response) Descriptor() ([]byte, []int) {
 	return file_rpc_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Disconnect) GetOp() Op {
+func (x *Response) GetType() ResponseType {
 	if x != nil {
-		return x.Op
+		return x.Type
 	}
-	return Op_CONNECT
+	return ResponseType_ACK
 }
 
-type Getchunk struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Op    Op     `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-	Index uint64 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
-}
-
-func (x *Getchunk) Reset() {
-	*x = Getchunk{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_rpc_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
+func (m *Response) GetPayload() isResponse_Payload {
+	if m != nil {
+		return m.Payload
 	}
+	return nil
 }
 
-func (x *Getchunk) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Getchunk) ProtoMessage() {}
-
-func (x *Getchunk) ProtoReflect() protoreflect.Message {
-	mi := &file_rpc_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Getchunk.ProtoReflect.Descriptor instead.
-func (*Getchunk) Descriptor() ([]byte, []int) {
-	return file_rpc_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *Getchunk) GetOp() Op {
-	if x != nil {
-		return x.Op
-	}
-	return Op_CONNECT
-}
-
-func (x *Getchunk) GetIndex() uint64 {
-	if x != nil {
-		return x.Index
-	}
-	return 0
-}
-
-type Getpiece struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Op    Op     `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-	Index uint64 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
-}
-
-func (x *Getpiece) Reset() {
-	*x = Getpiece{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_rpc_proto_msgTypes[3]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Getpiece) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Getpiece) ProtoMessage() {}
-
-func (x *Getpiece) ProtoReflect() protoreflect.Message {
-	mi := &file_rpc_proto_msgTypes[3]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Getpiece.ProtoReflect.Descriptor instead.
-func (*Getpiece) Descriptor() ([]byte, []int) {
-	return file_rpc_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *Getpiece) GetOp() Op {
-	if x != nil {
-		return x.Op
-	}
-	return Op_CONNECT
-}
-
-func (x *Getpiece) GetIndex() uint64 {
-	if x != nil {
-		return x.Index
-	}
-	return 0
-}
-
-type Ack struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Op Op `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-}
-
-func (x *Ack) Reset() {
-	*x = Ack{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_rpc_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Ack) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Ack) ProtoMessage() {}
-
-func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_rpc_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Ack.ProtoReflect.Descriptor instead.
-func (*Ack) Descriptor() ([]byte, []int) {
-	return file_rpc_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *Ack) GetOp() Op {
-	if x != nil {
-		return x.Op
-	}
-	return Op_CONNECT
-}
-
-type Chunkhash struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Op   Op     `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-	Hash []byte `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
-}
-
-func (x *Chunkhash) Reset() {
-	*x = Chunkhash{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_rpc_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Chunkhash) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Chunkhash) ProtoMessage() {}
-
-func (x *Chunkhash) ProtoReflect() protoreflect.Message {
-	mi := &file_rpc_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Chunkhash.ProtoReflect.Descriptor instead.
-func (*Chunkhash) Descriptor() ([]byte, []int) {
-	return file_rpc_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *Chunkhash) GetOp() Op {
-	if x != nil {
-		return x.Op
-	}
-	return Op_CONNECT
-}
-
-func (x *Chunkhash) GetHash() []byte {
-	if x != nil {
+func (x *Response) GetHash() []byte {
+	if x, ok := x.GetPayload().(*Response_Hash); ok {
 		return x.Hash
 	}
 	return nil
 }
 
-type Piece struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Op    Op     `protobuf:"varint,1,opt,name=op,proto3,enum=Op" json:"op,omitempty"`
-	Piece []byte `protobuf:"bytes,2,opt,name=piece,proto3" json:"piece,omitempty"`
-}
-
-func (x *Piece) Reset() {
-	*x = Piece{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_rpc_proto_msgTypes[6]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Piece) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Piece) ProtoMessage() {}
-
-func (x *Piece) ProtoReflect() protoreflect.Message {
-	mi := &file_rpc_proto_msgTypes[6]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Piece.ProtoReflect.Descriptor instead.
-func (*Piece) Descriptor() ([]byte, []int) {
-	return file_rpc_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *Piece) GetOp() Op {
-	if x != nil {
-		return x.Op
-	}
-	return Op_CONNECT
-}
-
-func (x *Piece) GetPiece() []byte {
-	if x != nil {
+func (x *Response) GetPiece() []byte {
+	if x, ok := x.GetPayload().(*Response_Piece); ok {
 		return x.Piece
 	}
 	return nil
 }
 
+func (x *Response) GetDummy() bool {
+	if x, ok := x.GetPayload().(*Response_Dummy); ok {
+		return x.Dummy
+	}
+	return false
+}
+
+type isResponse_Payload interface {
+	isResponse_Payload()
+}
+
+type Response_Hash struct {
+	Hash []byte `protobuf:"bytes,2,opt,name=hash,proto3,oneof"`
+}
+
+type Response_Piece struct {
+	Piece []byte `protobuf:"bytes,3,opt,name=piece,proto3,oneof"`
+}
+
+type Response_Dummy struct {
+	Dummy bool `protobuf:"varint,4,opt,name=dummy,proto3,oneof"`
+}
+
+func (*Response_Hash) isResponse_Payload() {}
+
+func (*Response_Piece) isResponse_Payload() {}
+
+func (*Response_Dummy) isResponse_Payload() {}
+
 var File_rpc_proto protoreflect.FileDescriptor
 
 var file_rpc_proto_rawDesc = []byte{
-	0x0a, 0x09, 0x72, 0x70, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x2e, 0x0a, 0x07, 0x43,
-	0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0e, 0x32, 0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x12, 0x0e, 0x0a, 0x02, 0x69,
-	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x02, 0x69, 0x64, 0x22, 0x21, 0x0a, 0x0a, 0x44,
-	0x69, 0x73, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x22, 0x35,
-	0x0a, 0x08, 0x47, 0x65, 0x74, 0x63, 0x68, 0x75, 0x6e, 0x6b, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x12,
-	0x14, 0x0a, 0x05, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05,
-	0x69, 0x6e, 0x64, 0x65, 0x78, 0x22, 0x35, 0x0a, 0x08, 0x47, 0x65, 0x74, 0x70, 0x69, 0x65, 0x63,
-	0x65, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x03, 0x2e,
-	0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x69, 0x6e, 0x64, 0x65, 0x78, 0x22, 0x1a, 0x0a, 0x03,
-	0x41, 0x63, 0x6b, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32,
-	0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x22, 0x34, 0x0a, 0x09, 0x43, 0x68, 0x75, 0x6e,
-	0x6b, 0x68, 0x61, 0x73, 0x68, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0e, 0x32, 0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x61,
-	0x73, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x68, 0x61, 0x73, 0x68, 0x22, 0x32,
-	0x0a, 0x05, 0x50, 0x69, 0x65, 0x63, 0x65, 0x12, 0x13, 0x0a, 0x02, 0x6f, 0x70, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x0e, 0x32, 0x03, 0x2e, 0x4f, 0x70, 0x52, 0x02, 0x6f, 0x70, 0x12, 0x14, 0x0a, 0x05,
-	0x70, 0x69, 0x65, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x70, 0x69, 0x65,
-	0x63, 0x65, 0x2a, 0x60, 0x0a, 0x02, 0x4f, 0x70, 0x12, 0x0b, 0x0a, 0x07, 0x43, 0x4f, 0x4e, 0x4e,
-	0x45, 0x43, 0x54, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x44, 0x49, 0x53, 0x43, 0x4f, 0x4e, 0x4e,
-	0x45, 0x43, 0x54, 0x10, 0x01, 0x12, 0x0c, 0x0a, 0x08, 0x47, 0x45, 0x54, 0x43, 0x48, 0x55, 0x4e,
-	0x4b, 0x10, 0x02, 0x12, 0x0c, 0x0a, 0x08, 0x47, 0x45, 0x54, 0x50, 0x49, 0x45, 0x43, 0x45, 0x10,
-	0x03, 0x12, 0x07, 0x0a, 0x03, 0x41, 0x43, 0x4b, 0x10, 0x04, 0x12, 0x0d, 0x0a, 0x09, 0x43, 0x48,
-	0x55, 0x4e, 0x4b, 0x48, 0x41, 0x53, 0x48, 0x10, 0x05, 0x12, 0x09, 0x0a, 0x05, 0x50, 0x49, 0x45,
-	0x43, 0x45, 0x10, 0x06, 0x42, 0x22, 0x5a, 0x20, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x61, 0x62, 0x75, 0x72, 0x64, 0x75, 0x6c, 0x65, 0x73, 0x63, 0x75, 0x2f, 0x67,
-	0x6f, 0x2d, 0x65, 0x7a, 0x2f, 0x65, 0x7a, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x0a, 0x09, 0x72, 0x70, 0x63, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x78, 0x0a, 0x07, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x20, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0e, 0x32, 0x0c, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x54, 0x79,
+	0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x10, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x05, 0x69, 0x6e,
+	0x64, 0x65, 0x78, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x48, 0x00, 0x52, 0x05, 0x69, 0x6e, 0x64,
+	0x65, 0x78, 0x12, 0x16, 0x0a, 0x05, 0x64, 0x75, 0x6d, 0x6d, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x08, 0x48, 0x00, 0x52, 0x05, 0x64, 0x75, 0x6d, 0x6d, 0x79, 0x42, 0x09, 0x0a, 0x07, 0x70, 0x61,
+	0x79, 0x6c, 0x6f, 0x61, 0x64, 0x22, 0x7e, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x21, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32,
+	0x0d, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04,
+	0x74, 0x79, 0x70, 0x65, 0x12, 0x14, 0x0a, 0x04, 0x68, 0x61, 0x73, 0x68, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0c, 0x48, 0x00, 0x52, 0x04, 0x68, 0x61, 0x73, 0x68, 0x12, 0x16, 0x0a, 0x05, 0x70, 0x69,
+	0x65, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x05, 0x70, 0x69, 0x65,
+	0x63, 0x65, 0x12, 0x16, 0x0a, 0x05, 0x64, 0x75, 0x6d, 0x6d, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x08, 0x48, 0x00, 0x52, 0x05, 0x64, 0x75, 0x6d, 0x6d, 0x79, 0x42, 0x09, 0x0a, 0x07, 0x70, 0x61,
+	0x79, 0x6c, 0x6f, 0x61, 0x64, 0x2a, 0x46, 0x0a, 0x0b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x0b, 0x0a, 0x07, 0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x10,
+	0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x44, 0x49, 0x53, 0x43, 0x4f, 0x4e, 0x4e, 0x45, 0x43, 0x54, 0x10,
+	0x01, 0x12, 0x0c, 0x0a, 0x08, 0x47, 0x45, 0x54, 0x43, 0x48, 0x55, 0x4e, 0x4b, 0x10, 0x02, 0x12,
+	0x0c, 0x0a, 0x08, 0x47, 0x45, 0x54, 0x50, 0x49, 0x45, 0x43, 0x45, 0x10, 0x03, 0x2a, 0x31, 0x0a,
+	0x0c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a,
+	0x03, 0x41, 0x43, 0x4b, 0x10, 0x00, 0x12, 0x0d, 0x0a, 0x09, 0x43, 0x48, 0x55, 0x4e, 0x4b, 0x48,
+	0x41, 0x53, 0x48, 0x10, 0x01, 0x12, 0x09, 0x0a, 0x05, 0x50, 0x49, 0x45, 0x43, 0x45, 0x10, 0x02,
+	0x42, 0x22, 0x5a, 0x20, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
+	0x62, 0x75, 0x72, 0x64, 0x75, 0x6c, 0x65, 0x73, 0x63, 0x75, 0x2f, 0x67, 0x6f, 0x2d, 0x65, 0x7a,
+	0x2f, 0x65, 0x7a, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -502,31 +374,22 @@ func file_rpc_proto_rawDescGZIP() []byte {
 	return file_rpc_proto_rawDescData
 }
 
-var file_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_rpc_proto_goTypes = []interface{}{
-	(Op)(0),            // 0: Op
-	(*Connect)(nil),    // 1: Connect
-	(*Disconnect)(nil), // 2: Disconnect
-	(*Getchunk)(nil),   // 3: Getchunk
-	(*Getpiece)(nil),   // 4: Getpiece
-	(*Ack)(nil),        // 5: Ack
-	(*Chunkhash)(nil),  // 6: Chunkhash
-	(*Piece)(nil),      // 7: Piece
+	(RequestType)(0),  // 0: RequestType
+	(ResponseType)(0), // 1: ResponseType
+	(*Request)(nil),   // 2: Request
+	(*Response)(nil),  // 3: Response
 }
 var file_rpc_proto_depIdxs = []int32{
-	0, // 0: Connect.op:type_name -> Op
-	0, // 1: Disconnect.op:type_name -> Op
-	0, // 2: Getchunk.op:type_name -> Op
-	0, // 3: Getpiece.op:type_name -> Op
-	0, // 4: Ack.op:type_name -> Op
-	0, // 5: Chunkhash.op:type_name -> Op
-	0, // 6: Piece.op:type_name -> Op
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	0, // 0: Request.type:type_name -> RequestType
+	1, // 1: Response.type:type_name -> ResponseType
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_rpc_proto_init() }
@@ -536,7 +399,7 @@ func file_rpc_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_rpc_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Connect); i {
+			switch v := v.(*Request); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -548,67 +411,7 @@ func file_rpc_proto_init() {
 			}
 		}
 		file_rpc_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Disconnect); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_rpc_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Getchunk); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_rpc_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Getpiece); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_rpc_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Ack); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_rpc_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Chunkhash); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_rpc_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Piece); i {
+			switch v := v.(*Response); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -620,13 +423,23 @@ func file_rpc_proto_init() {
 			}
 		}
 	}
+	file_rpc_proto_msgTypes[0].OneofWrappers = []interface{}{
+		(*Request_Id)(nil),
+		(*Request_Index)(nil),
+		(*Request_Dummy)(nil),
+	}
+	file_rpc_proto_msgTypes[1].OneofWrappers = []interface{}{
+		(*Response_Hash)(nil),
+		(*Response_Piece)(nil),
+		(*Response_Dummy)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_rpc_proto_rawDesc,
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      2,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
