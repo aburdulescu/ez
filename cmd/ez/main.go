@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -28,6 +29,7 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 })
 
 func main() {
+	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 	args := os.Args[1:]
 	if len(args) < 1 {
 		handleErr(fmt.Errorf("command not provided"))

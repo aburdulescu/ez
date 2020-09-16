@@ -110,6 +110,7 @@ func (c Client) handleDisconnect() error {
 func (c Client) handleGetchunk(index uint64) error {
 	chunkHashes, err := c.getChunkHashes()
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	rsp := &ezs.Response{
@@ -117,14 +118,17 @@ func (c Client) handleGetchunk(index uint64) error {
 		Payload: &ezs.Response_Hash{[]byte(chunkHashes[index])},
 	}
 	if err := c.send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	ifile, err := c.getIFile()
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	chunk, err := readChunk(ifile, index)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	npieces := len(chunk) / chunks.PIECE_SIZE
@@ -136,6 +140,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			Payload: &ezs.Response_Piece{piece},
 		}
 		if err := c.send(rsp); err != nil {
+			log.Println(err)
 			return err
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -147,6 +152,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			Payload: &ezs.Response_Piece{piece},
 		}
 		if err := c.send(rsp); err != nil {
+			log.Println(err)
 			return err
 		}
 	}
@@ -155,6 +161,7 @@ func (c Client) handleGetchunk(index uint64) error {
 		Payload: &ezs.Response_Dummy{},
 	}
 	if err := c.send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -163,13 +170,15 @@ func (c Client) handleGetchunk(index uint64) error {
 func readChunk(ifile ezt.IFile, i uint64) ([]byte, error) {
 	f, err := os.Open(filepath.Join(ifile.Dir, ifile.Name))
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	defer f.Close()
 	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
 	b := make([]byte, chunks.CHUNK_SIZE)
 	n, err := r.Read(b)
-	if err != nil {
+	if err != io.EOF && err != nil {
+		log.Println(n, err)
 		return nil, err
 	}
 	return b[:n], nil

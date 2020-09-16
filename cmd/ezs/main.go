@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 	ln, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
