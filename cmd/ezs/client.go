@@ -5,7 +5,11 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
+	"time"
 
+	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/ezs"
 	"github.com/aburdulescu/go-ez/ezt"
 	"github.com/aburdulescu/go-ez/hash"
@@ -16,10 +20,10 @@ import (
 type Client struct {
 	id   string
 	conn net.Conn
-	db   badger.DB
+	db   *badger.DB
 }
 
-func (c Client) run(db *badger.DB) {
+func (c Client) run() {
 	defer c.conn.Close()
 	remAddr := c.conn.RemoteAddr().String()
 	b := make([]byte, 8192)
@@ -115,7 +119,60 @@ func (c Client) handleGetchunk(index uint64) error {
 	if err := c.send(rsp); err != nil {
 		return err
 	}
+	ifile, err := c.getIFile()
+	if err != nil {
+		return err
+	}
+	chunk, err := readChunk(ifile, index)
+	if err != nil {
+		return err
+	}
+	npieces := len(chunk) / chunks.PIECE_SIZE
+	log.Println(npieces)
+	for i := 0; i < npieces; i++ {
+		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
+		rsp := &ezs.Response{
+			Type:    ezs.ResponseType_PIECE,
+			Payload: &ezs.Response_Piece{piece},
+		}
+		if err := c.send(rsp); err != nil {
+			return err
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if len(chunk)%chunks.PIECE_SIZE != 0 {
+		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
+		rsp := &ezs.Response{
+			Type:    ezs.ResponseType_PIECE,
+			Payload: &ezs.Response_Piece{piece},
+		}
+		if err := c.send(rsp); err != nil {
+			return err
+		}
+	}
+	rsp = &ezs.Response{
+		Type:    ezs.ResponseType_CHUNKEND,
+		Payload: &ezs.Response_Dummy{},
+	}
+	if err := c.send(rsp); err != nil {
+		return err
+	}
 	return nil
+}
+
+func readChunk(ifile ezt.IFile, i uint64) ([]byte, error) {
+	f, err := os.Open(filepath.Join(ifile.Dir, ifile.Name))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
+	b := make([]byte, chunks.CHUNK_SIZE)
+	n, err := r.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
 }
 
 func (c Client) handleGetpiece(index uint64) error {

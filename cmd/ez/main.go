@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezs"
 	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/go-ez/hash"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -127,16 +129,18 @@ func fetch(name string, id string) error {
 	if err != nil {
 		return err
 	}
-	chunkHash := rsp.GetHash()
-	fmt.Printf("%s\n", chunkHash)
-	b := make([]byte, 10240)
+	chunkHash := hash.Hash(rsp.GetHash())
+	fmt.Printf("%v, %s\n", rsp.GetType(), chunkHash)
 	exit := false
+	b := make([]byte, 10240)
 	buf := new(bytes.Buffer)
+	i := 0
 	for !exit {
 		n, err := conn.Read(b)
 		if err != nil {
 			return err
 		}
+		log.Println(n)
 		rsp := &ezs.Response{}
 		if err := proto.Unmarshal(b[:n], rsp); err != nil {
 			return err
@@ -152,6 +156,8 @@ func fetch(name string, id string) error {
 			}
 		default:
 		}
+		log.Println(i)
+		i++
 	}
 	f, err := os.Create(name)
 	if err != nil {

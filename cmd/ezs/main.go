@@ -33,9 +33,10 @@ func main() {
 			continue
 		}
 		c := Client{
+			db:   db,
 			conn: conn,
 		}
-		go c.run(db)
+		go c.run()
 	}
 }
 
