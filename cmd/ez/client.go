@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -68,10 +70,9 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 
 func (c Client) handleGetchunk(ch chan GetchunkPart) {
 	exit := false
-	b := make([]byte, 10240)
-	i := 0
+	buf := new(bytes.Buffer)
 	for !exit {
-		rsp, err := c.recv(b)
+		rsp, err := c.recv(buf)
 		if err != nil {
 			ch <- GetchunkPart{nil, err}
 			exit = true
@@ -86,8 +87,6 @@ func (c Client) handleGetchunk(ch chan GetchunkPart) {
 			ch <- GetchunkPart{nil, fmt.Errorf("unexpected response %v", rspType)}
 			exit = true
 		}
-		log.Println(i)
-		i++
 	}
 	close(ch)
 }
@@ -112,13 +111,14 @@ func (c Client) send(req *ezs.Request) (*ezs.Response, error) {
 	return rsp, nil
 }
 
-func (c Client) recv(b []byte) (*ezs.Response, error) {
-	n, err := c.conn.Read(b)
+func (c Client) recv(buf *bytes.Buffer) (*ezs.Response, error) {
+	n, err := io.Copy(buf, c.conn)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("n=%d", n)
 	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(b[:n], rsp); err != nil {
+	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
 		return nil, err
 	}
 	return rsp, nil

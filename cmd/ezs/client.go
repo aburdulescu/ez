@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/ezs"
@@ -143,7 +142,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			log.Println(err)
 			return err
 		}
-		time.Sleep(100 * time.Millisecond) // TODO: remove this workaround
+		log.Println(i)
 	}
 	if len(chunk)%chunks.PIECE_SIZE != 0 {
 		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
