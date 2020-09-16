@@ -143,7 +143,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			log.Println(err)
 			return err
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond) // TODO: remove this workaround
 	}
 	if len(chunk)%chunks.PIECE_SIZE != 0 {
 		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
