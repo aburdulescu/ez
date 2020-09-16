@@ -69,26 +69,33 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 }
 
 func (c Client) handleGetchunk(ch chan GetchunkPart) {
-	exit := false
+	defer close(ch)
 	buf := new(bytes.Buffer)
-	for !exit {
-		rsp, err := c.recv(buf)
-		if err != nil {
-			ch <- GetchunkPart{nil, err}
-			exit = true
-		}
-		rspType := rsp.GetType()
-		switch rspType {
-		case ezs.ResponseType_CHUNKEND:
-			exit = true
-		case ezs.ResponseType_PIECE:
-			ch <- GetchunkPart{rsp.GetPiece(), nil}
-		default:
-			ch <- GetchunkPart{nil, fmt.Errorf("unexpected response %v", rspType)}
-			exit = true
-		}
+	n, err := io.Copy(buf, c.conn)
+	if err != nil {
+		ch <- GetchunkPart{nil, err}
+		return
 	}
-	close(ch)
+	log.Printf("n=%d", n)
+	return
+
+	rsp := &ezs.Response{}
+	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
+		ch <- GetchunkPart{nil, err}
+		return
+
+	}
+
+	rspType := rsp.GetType()
+	switch rspType {
+	case ezs.ResponseType_CHUNKEND:
+		return
+	case ezs.ResponseType_PIECE:
+		ch <- GetchunkPart{rsp.GetPiece(), nil}
+	default:
+		ch <- GetchunkPart{nil, fmt.Errorf("unexpected response %v", rspType)}
+		return
+	}
 }
 
 func (c Client) send(req *ezs.Request) (*ezs.Response, error) {
@@ -106,19 +113,6 @@ func (c Client) send(req *ezs.Request) (*ezs.Response, error) {
 	}
 	rsp := &ezs.Response{}
 	if err := proto.Unmarshal(readBuf[:n], rsp); err != nil {
-		return nil, err
-	}
-	return rsp, nil
-}
-
-func (c Client) recv(buf *bytes.Buffer) (*ezs.Response, error) {
-	n, err := io.Copy(buf, c.conn)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("n=%d", n)
-	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
 		return nil, err
 	}
 	return rsp, nil
