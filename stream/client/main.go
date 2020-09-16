@@ -22,7 +22,9 @@ func main() {
 	}
 	defer client.Close()
 	buf := new(bytes.Buffer)
-	for i := 0; i < 1024; i++ {
+	nchunks := (100 << 20) / CHUNK_SIZE // TODO: check remainder
+	log.Println(nchunks)
+	for i := 0; i < nchunks; i++ {
 		ch, err := client.SendRequest(uint64(i + 1))
 		if err != nil {
 			log.Fatal(err)

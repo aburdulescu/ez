@@ -44,7 +44,23 @@ func handleClient(conn net.Conn) {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			return
 		}
-		npieces := uint64(1024)
+		req := &rpc.Request{}
+		if err := proto.Unmarshal(b[:n], req); err != nil {
+			log.Printf("%s: error: %v\n", remAddr, err)
+			return
+		}
+		chunk, err := readChunk("f100MB", req.GetIndex()-1)
+		if err != nil {
+			log.Printf("%s: error: %v\n", remAddr, err)
+			return
+		}
+		npieces := uint64(len(chunk) / PIECE_SIZE)
+		remainder := 0
+		if len(chunk)%PIECE_SIZE != 0 {
+			remainder = 1
+			npieces++
+		}
+		log.Println(npieces)
 		rsp := &rpc.Response{Npieces: npieces}
 		rspBuf, err := proto.Marshal(rsp)
 		if err != nil {
@@ -55,43 +71,23 @@ func handleClient(conn net.Conn) {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			return
 		}
-		req := &rpc.Request{}
-		if err := proto.Unmarshal(b[:n], req); err != nil {
-			log.Printf("%s: error: %v\n", remAddr, err)
-			return
+		for i := uint64(0); i < npieces; i++ {
+			piece := chunk[i*PIECE_SIZE : (i+1)*PIECE_SIZE]
+			rsp := &rpc.Piece{Piece: piece}
+			if err := sendPiece(conn, rsp); err != nil {
+				log.Printf("%s: error: %v\n", remAddr, err)
+				return
+			}
 		}
-		if err := handleRequest(conn, req); err != nil {
-			log.Printf("%s: error: %v\n", remAddr, err)
-			return
-		}
-	}
-}
-
-func handleRequest(conn net.Conn, req *rpc.Request) error {
-	chunk, err := readChunk("f100MB", req.GetIndex()-1)
-	if err != nil {
-		return err
-	}
-	npieces := len(chunk) / PIECE_SIZE
-	for i := 0; i < npieces; i++ {
-		piece := chunk[i*PIECE_SIZE : (i+1)*PIECE_SIZE]
-		rsp := &rpc.Piece{Piece: piece}
-		if err := sendPiece(conn, rsp); err != nil {
-			return err
+		if remainder != 0 {
+			piece := chunk[(len(chunk)-1)*PIECE_SIZE:]
+			rsp := &rpc.Piece{Piece: piece}
+			if err := sendPiece(conn, rsp); err != nil {
+				log.Printf("%s: error: %v\n", remAddr, err)
+				return
+			}
 		}
 	}
-	if len(chunk)%PIECE_SIZE != 0 {
-		piece := chunk[(len(chunk)-1)*PIECE_SIZE:]
-		rsp := &rpc.Piece{Piece: piece}
-		if err := sendPiece(conn, rsp); err != nil {
-			return err
-		}
-	}
-	rsp := &rpc.Piece{Piece: nil}
-	if err := sendPiece(conn, rsp); err != nil {
-		return err
-	}
-	return nil
 }
 
 func readChunk(path string, i uint64) ([]byte, error) {
