@@ -56,7 +56,7 @@ func onLs(args ...string) error {
 		return err
 	}
 	for _, f := range files {
-		fmt.Println(f)
+		fmt.Printf("%s\t\t%s\t\t%d\n", f.Hash, f.Name, f.Size)
 	}
 	return nil
 }

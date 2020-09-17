@@ -81,13 +81,7 @@ func onLs(args ...string) error {
 					if err := json.Unmarshal(v, &i); err != nil {
 						return err
 					}
-					fmt.Printf("%s %v\n", k, i)
-				} else if strings.HasSuffix(kstr, "chunks") {
-					var c []hash.Hash
-					if err := json.Unmarshal(v, &c); err != nil {
-						return err
-					}
-					fmt.Printf("%s %v\n", k, len(c))
+					fmt.Printf("%s\t%s\t%s\t\t%d\n", strings.Split(kstr, ".")[0], i.Dir, i.Name, i.Size)
 				}
 				return nil
 			})
