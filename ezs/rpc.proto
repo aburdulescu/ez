@@ -9,7 +9,6 @@ enum RequestType {
     GETPIECE = 3;
 }
 
-
 message Request {
     RequestType type = 1;
     oneof payload {
@@ -23,14 +22,22 @@ enum ResponseType {
     ACK = 0;
     CHUNKHASH = 1;
     PIECE = 2;
-    CHUNKEND = 3;
 }
 
 message Response {
     ResponseType type = 1;
     oneof payload {
-        bytes hash = 2;
+        Chunkhash chunkhash = 2;
         bytes piece = 3;
         bool dummy = 4;
     }
+}
+
+message Chunkhash {
+    bytes hash = 1;
+    uint64 npieces = 2;
+}
+
+message Piece {
+    bytes piece = 1;
 }

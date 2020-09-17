@@ -56,7 +56,7 @@ func handleClient(conn net.Conn) {
 			return
 		}
 		npieces := uint64(len(chunk) / PIECE_SIZE)
-		remainder := 0
+		remainder := uint64(0)
 		if len(chunk)%PIECE_SIZE != 0 {
 			remainder = 1
 			npieces++
@@ -72,7 +72,7 @@ func handleClient(conn net.Conn) {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			return
 		}
-		for i := uint64(0); i < npieces; i++ {
+		for i := uint64(0); i < npieces-remainder; i++ {
 			piece := chunk[i*PIECE_SIZE : (i+1)*PIECE_SIZE]
 			rsp := &rpc.Piece{Piece: piece}
 			if err := sendPiece(conn, rsp); err != nil {

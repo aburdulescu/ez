@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -34,8 +34,9 @@ func (c Client) Connect(id string) error {
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
 	}
-	rsp, err := c.send(req)
+	rsp, err := c.send(req, false)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	rspType := rsp.GetType()
@@ -55,50 +56,59 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
 	}
-	rsp, err := c.send(req)
+	rsp, err := c.send(req, true)
 	if err != nil {
+		log.Println(err)
 		return nil, nil, err
 	}
 	rspType := rsp.GetType()
 	if rspType != ezs.ResponseType_CHUNKHASH {
 		return nil, nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
+	chunkhashMsg := rsp.GetChunkhash()
 	ch := make(chan GetchunkPart)
-	go c.handleGetchunk(ch)
-	return hash.Hash(rsp.GetHash()), ch, nil
+	go c.handleGetchunk(chunkhashMsg.GetNpieces(), ch)
+	return hash.Hash(chunkhashMsg.GetHash()), ch, nil
 }
 
-func (c Client) handleGetchunk(ch chan GetchunkPart) {
-	defer close(ch)
-	buf := new(bytes.Buffer)
-	n, err := io.Copy(buf, c.conn)
+func ReadPbMsg(c net.Conn) ([]byte, error) {
+	b := make([]byte, 2)
+	n, err := io.ReadAtLeast(c, b, 2)
 	if err != nil {
-		ch <- GetchunkPart{nil, err}
-		return
+		return nil, err
 	}
-	log.Printf("n=%d", n)
-	return
-
-	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
-		ch <- GetchunkPart{nil, err}
-		return
-
+	msgsize := binary.LittleEndian.Uint16(b)
+	dataBuf := make([]byte, msgsize)
+	n, err = c.Read(dataBuf)
+	if err != nil {
+		return nil, err
 	}
+	if uint16(n) != msgsize {
+		return nil, fmt.Errorf("read less than expected: n=%d, msgsize=%d", n, msgsize)
+	}
+	return dataBuf, nil
+}
 
-	rspType := rsp.GetType()
-	switch rspType {
-	case ezs.ResponseType_CHUNKEND:
-		return
-	case ezs.ResponseType_PIECE:
+func (c Client) handleGetchunk(npieces uint64, ch chan GetchunkPart) {
+	defer close(ch)
+	for i := uint64(0); i < npieces; i++ {
+		b, err := ReadPbMsg(c.conn)
+		if err != nil {
+			log.Println(err) // TODO: sometimes the read fails because nread < size specified in header
+			ch <- GetchunkPart{nil, err}
+			return
+		}
+		rsp := &ezs.Piece{}
+		if err := proto.Unmarshal(b, rsp); err != nil {
+			log.Println(err)
+			ch <- GetchunkPart{nil, err}
+			return
+		}
 		ch <- GetchunkPart{rsp.GetPiece(), nil}
-	default:
-		ch <- GetchunkPart{nil, fmt.Errorf("unexpected response %v", rspType)}
-		return
 	}
 }
 
-func (c Client) send(req *ezs.Request) (*ezs.Response, error) {
+func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
 	writeBuf, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -106,13 +116,24 @@ func (c Client) send(req *ezs.Request) (*ezs.Response, error) {
 	if _, err := c.conn.Write(writeBuf); err != nil {
 		return nil, err
 	}
-	readBuf := make([]byte, 8192)
-	n, err := c.conn.Read(readBuf)
-	if err != nil {
-		return nil, err
+	var readBuf []byte
+	if streaming {
+		b, err := ReadPbMsg(c.conn)
+		if err != nil {
+			return nil, err
+		}
+		readBuf = b
+	} else {
+		b := make([]byte, 8192)
+		n, err := c.conn.Read(b)
+		if err != nil {
+			return nil, err
+		}
+		readBuf = b[:n]
 	}
 	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(readBuf[:n], rsp); err != nil {
+	if err := proto.Unmarshal(readBuf, rsp); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return rsp, nil

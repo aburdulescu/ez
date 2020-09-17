@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -106,17 +108,26 @@ func (c Client) handleDisconnect() error {
 	return nil
 }
 
+func WritePbMsg(c net.Conn, msg []byte) error {
+	const msgMaxSize = (1 << 16) - 1
+	if len(msg) > msgMaxSize {
+		return fmt.Errorf("msg len too big")
+	}
+	b := make([]byte, 2+len(msg))
+	binary.LittleEndian.PutUint16(b, uint16(len(msg)))
+	for i := 0; i < len(msg); i++ {
+		b[i+2] = msg[i]
+	}
+	_, err := c.Write(b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c Client) handleGetchunk(index uint64) error {
 	chunkHashes, err := c.getChunkHashes()
 	if err != nil {
-		log.Println(err)
-		return err
-	}
-	rsp := &ezs.Response{
-		Type:    ezs.ResponseType_CHUNKHASH,
-		Payload: &ezs.Response_Hash{[]byte(chunkHashes[index])},
-	}
-	if err := c.send(rsp); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -130,38 +141,51 @@ func (c Client) handleGetchunk(index uint64) error {
 		log.Println(err)
 		return err
 	}
-	npieces := len(chunk) / chunks.PIECE_SIZE
-	log.Println(npieces)
-	for i := 0; i < npieces; i++ {
-		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
-		rsp := &ezs.Response{
-			Type:    ezs.ResponseType_PIECE,
-			Payload: &ezs.Response_Piece{piece},
-		}
-		if err := c.send(rsp); err != nil {
-			log.Println(err)
-			return err
-		}
-		log.Println(i)
-	}
+	npieces := uint64(len(chunk) / chunks.PIECE_SIZE)
+	remainder := uint64(0)
 	if len(chunk)%chunks.PIECE_SIZE != 0 {
-		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
-		rsp := &ezs.Response{
-			Type:    ezs.ResponseType_PIECE,
-			Payload: &ezs.Response_Piece{piece},
+		npieces++
+		remainder = 1
+	}
+	rsp := &ezs.Response{
+		Type: ezs.ResponseType_CHUNKHASH,
+		Payload: &ezs.Response_Chunkhash{
+			&ezs.Chunkhash{
+				Hash:    []byte(chunkHashes[index]),
+				Npieces: npieces,
+			},
+		},
+	}
+	b, err := proto.Marshal(rsp)
+	if err != nil {
+		return err
+	}
+	if err := WritePbMsg(c.conn, b); err != nil {
+		return err
+	}
+	for i := uint64(0); i < npieces-remainder; i++ {
+		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
+		rsp := &ezs.Piece{Piece: piece}
+		b, err := proto.Marshal(rsp)
+		if err != nil {
+			return err
 		}
-		if err := c.send(rsp); err != nil {
+		if err := WritePbMsg(c.conn, b); err != nil {
 			log.Println(err)
 			return err
 		}
 	}
-	rsp = &ezs.Response{
-		Type:    ezs.ResponseType_CHUNKEND,
-		Payload: &ezs.Response_Dummy{},
-	}
-	if err := c.send(rsp); err != nil {
-		log.Println(err)
-		return err
+	if remainder != 0 {
+		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
+		rsp := &ezs.Piece{Piece: piece}
+		b, err := proto.Marshal(rsp)
+		if err != nil {
+			return err
+		}
+		if err := WritePbMsg(c.conn, b); err != nil {
+			log.Println(err)
+			return err
+		}
 	}
 	return nil
 }

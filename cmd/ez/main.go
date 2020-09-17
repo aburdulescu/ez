@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/http"
@@ -77,7 +76,7 @@ func onGet(args ...string) error {
 	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
 		return err
 	}
-	fmt.Println(r)
+	log.Println(r)
 
 	peersLen := uint64(len(r.Peers))
 	nchunks := uint64(math.Ceil(float64(r.IFile.Size) / float64(chunks.CHUNK_SIZE)))
@@ -85,22 +84,20 @@ func onGet(args ...string) error {
 		// select nchunks number of peers if available
 		// ex: nchunks=10, npeers=20 => select 10 peers from the list and get from each one chunk
 		nchunksPerPeer := 1
-		fmt.Printf("nchunks=%d, chunksPerPeer=%d\n", nchunks, nchunksPerPeer)
+		log.Printf("nchunks=%d, chunksPerPeer=%d\n", nchunks, nchunksPerPeer)
 	} else {
 		// split the chunks between the available peers
 		// ex: nchunks=41, npeers=3 => split chunks between the 3 peers: peer1=13, peer2=13, peer3=15
 		nchunksPerPeer := nchunks / peersLen
 		remainder := nchunks % peersLen
-		fmt.Printf("nchunks=%d, chunksPerPeer=%d, remainder=%d\n", nchunks, nchunksPerPeer, remainder)
+		log.Printf("nchunks=%d, chunksPerPeer=%d, remainder=%d\n", nchunks, nchunksPerPeer, remainder)
 		if remainder != 0 {
 			// add remainder chunks to one(or more) peers
 		}
 	}
-
 	if err := fetch(r.IFile.Name, id); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -117,7 +114,7 @@ func fetch(name string, id string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", chunkHash)
+	log.Printf("%s\n", chunkHash)
 	buf := new(bytes.Buffer)
 	for part := range ch {
 		if part.err != nil {
@@ -128,13 +125,14 @@ func fetch(name string, id string) error {
 			return err
 		}
 	}
-	f, err := os.Create(name)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if _, err := io.Copy(f, buf); err != nil {
-		return err
-	}
+	log.Println(buf.Len())
+	// f, err := os.Create(name)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer f.Close()
+	// if _, err := io.Copy(f, buf); err != nil {
+	// 	return err
+	// }
 	return nil
 }
