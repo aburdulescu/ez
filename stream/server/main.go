@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -67,7 +68,7 @@ func handleClient(conn net.Conn) {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			return
 		}
-		if _, err := conn.Write(rspBuf); err != nil {
+		if err := WritePbMsg(conn, rspBuf); err != nil {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			return
 		}
@@ -110,7 +111,24 @@ func sendPiece(conn net.Conn, rsp *rpc.Piece) error {
 	if err != nil {
 		return err
 	}
-	if _, err := conn.Write(b); err != nil {
+	if err := WritePbMsg(conn, b); err != nil {
+		return err
+	}
+	return nil
+}
+
+func WritePbMsg(c net.Conn, msg []byte) error {
+	const msgMaxSize = (1 << 16) - 1
+	if len(msg) > msgMaxSize {
+		return fmt.Errorf("msg len too big")
+	}
+	b := make([]byte, 2+len(msg))
+	binary.LittleEndian.PutUint16(b, uint16(len(msg)))
+	for i := 0; i < len(msg); i++ {
+		b[i+2] = msg[i]
+	}
+	_, err := c.Write(b)
+	if err != nil {
 		return err
 	}
 	return nil

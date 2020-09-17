@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -86,22 +88,20 @@ func (c Client) SendRequest(index uint64) (chan ResponsePart, error) {
 
 func (c Client) handleResponse(ch chan ResponsePart, npieces uint64) {
 	defer close(ch)
-	buf := new(bytes.Buffer)
 	for i := uint64(0); i < npieces; i++ {
-		_, err := io.CopyN(buf, c.conn, PIECE_SIZE+3)
+		b, err := ReadPbMsg(c.conn)
 		if err != nil {
 			log.Println(err)
 			ch <- ResponsePart{nil, err}
 			return
 		}
 		rsp := &rpc.Piece{}
-		if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
+		if err := proto.Unmarshal(b, rsp); err != nil {
 			log.Println(err)
 			ch <- ResponsePart{nil, err}
 			return
 		}
 		ch <- ResponsePart{rsp.GetPiece(), nil}
-		buf.Reset()
 	}
 }
 
@@ -115,16 +115,33 @@ func (c Client) send(req *rpc.Request) (*rpc.Response, error) {
 		log.Println(err)
 		return nil, err
 	}
-	readBuf := new(bytes.Buffer)
-	n, err := io.CopyN(readBuf, c.conn, 3)
+	readBuf, err := ReadPbMsg(c.conn)
 	if err != nil {
-		log.Println(n, err)
+		log.Println(err)
 		return nil, err
 	}
 	rsp := &rpc.Response{}
-	if err := proto.Unmarshal(readBuf.Bytes(), rsp); err != nil {
+	if err := proto.Unmarshal(readBuf, rsp); err != nil {
 		log.Println(err)
 		return nil, err
 	}
 	return rsp, nil
+}
+
+func ReadPbMsg(c net.Conn) ([]byte, error) {
+	b := make([]byte, 2)
+	n, err := io.ReadAtLeast(c, b, 2)
+	if err != nil {
+		return nil, err
+	}
+	msgsize := binary.LittleEndian.Uint16(b)
+	dataBuf := make([]byte, msgsize)
+	n, err = c.Read(dataBuf)
+	if err != nil {
+		return nil, err
+	}
+	if uint16(n) != msgsize {
+		return nil, fmt.Errorf("read less than expected: n=%d, msgsize=%d", n, msgsize)
+	}
+	return dataBuf, nil
 }
