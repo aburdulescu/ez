@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -73,20 +74,18 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 
 func ReadPbMsg(c net.Conn) ([]byte, error) {
 	b := make([]byte, 2)
-	n, err := io.ReadAtLeast(c, b, 2)
+	_, err := io.ReadAtLeast(c, b, 2)
 	if err != nil {
 		return nil, err
 	}
 	msgsize := binary.LittleEndian.Uint16(b)
-	dataBuf := make([]byte, msgsize)
-	n, err = c.Read(dataBuf)
+	buf := new(bytes.Buffer)
+	n, err := io.CopyN(buf, c, int64(msgsize))
 	if err != nil {
+		log.Println(n, err)
 		return nil, err
 	}
-	if uint16(n) != msgsize {
-		return nil, fmt.Errorf("read less than expected: n=%d, msgsize=%d", n, msgsize)
-	}
-	return dataBuf, nil
+	return buf.Bytes(), nil
 }
 
 func (c Client) handleGetchunk(npieces uint64, ch chan GetchunkPart) {

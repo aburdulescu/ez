@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -118,8 +119,10 @@ func WritePbMsg(c net.Conn, msg []byte) error {
 	for i := 0; i < len(msg); i++ {
 		b[i+2] = msg[i]
 	}
-	_, err := c.Write(b)
+	buf := bytes.NewBuffer(b)
+	n, err := io.Copy(c, buf)
 	if err != nil {
+		log.Println(buf.Len(), n, err)
 		return err
 	}
 	return nil
