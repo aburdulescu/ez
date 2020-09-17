@@ -190,6 +190,7 @@ func onRm(args ...string) error {
 	return nil
 }
 
+// TODO: first get the file from the tracker, compare with local ones and send the diff to tracker
 func onSync(args ...string) error {
 	var files []ezt.File
 	err := db.View(func(txn *badger.Txn) error {
