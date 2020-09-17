@@ -23,7 +23,9 @@ func main() {
 	defer client.Close()
 	buf := new(bytes.Buffer)
 	nchunks := (100 << 20) / CHUNK_SIZE // TODO: check remainder
-	log.Println(nchunks)
+	if (100<<20)%CHUNK_SIZE != 0 {
+		nchunks++
+	}
 	for i := 0; i < nchunks; i++ {
 		ch, err := client.SendRequest(uint64(i + 1))
 		if err != nil {
@@ -113,14 +115,14 @@ func (c Client) send(req *rpc.Request) (*rpc.Response, error) {
 		log.Println(err)
 		return nil, err
 	}
-	readBuf := make([]byte, 8192)
-	n, err := c.conn.Read(readBuf)
+	readBuf := new(bytes.Buffer)
+	n, err := io.CopyN(readBuf, c.conn, 3)
 	if err != nil {
-		log.Println(err)
+		log.Println(n, err)
 		return nil, err
 	}
 	rsp := &rpc.Response{}
-	if err := proto.Unmarshal(readBuf[:n], rsp); err != nil {
+	if err := proto.Unmarshal(readBuf.Bytes(), rsp); err != nil {
 		log.Println(err)
 		return nil, err
 	}
