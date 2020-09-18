@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -15,10 +16,9 @@ import (
 	"github.com/aburdulescu/go-ez/hash"
 )
 
-const (
-	TRACKER_HOST = "localhost"
-	TRACKER_ADDR = "http://" + TRACKER_HOST + ":23230/"
-)
+type Config struct {
+	Tracker string `json:"tracker"`
+}
 
 var c = cli.New(os.Args[0], []cli.Cmd{
 	cli.Cmd{
@@ -33,7 +33,19 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 	},
 })
 
+var cfg Config
+
 func main() {
+	var configPath string
+	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
+	flag.Parse()
+	f, err := os.Open(configPath)
+	if err != nil {
+		handleErr(err)
+	}
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		handleErr(err)
+	}
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 	args := os.Args[1:]
 	if len(args) < 1 {
@@ -53,7 +65,7 @@ func handleErr(err error) {
 }
 
 func onLs(args ...string) error {
-	rsp, err := http.Get(TRACKER_ADDR + "?hash=all")
+	rsp, err := http.Get(cfg.Tracker + "?hash=all")
 	if err != nil {
 		return err
 	}
@@ -73,7 +85,7 @@ func onGet(args ...string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	rsp, err := http.Get(TRACKER_ADDR + "?hash=" + id)
+	rsp, err := http.Get(cfg.Tracker + "?hash=" + id)
 	if err != nil {
 		return err
 	}
