@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/go-ez/hash"
 )
 
 var c = cli.New(os.Args[0], []cli.Cmd{
@@ -75,8 +77,6 @@ func onGet(args ...string) error {
 	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
 		return err
 	}
-	log.Println(r)
-
 	peersLen := uint64(len(r.Peers))
 	nchunks := uint64(r.IFile.Size / chunks.CHUNK_SIZE)
 	if r.IFile.Size%chunks.CHUNK_SIZE != 0 {
@@ -97,9 +97,26 @@ func onGet(args ...string) error {
 			// add remainder chunks to one(or more) peers
 		}
 	}
-	_, err = fetch(id, nchunks)
-	if err != nil {
+	var client Client
+	if err := client.Dial(":8081"); err != nil {
 		return err
+	}
+	defer client.Close()
+	if err := client.Connect(id); err != nil {
+		return err
+	}
+	fileBuf := new(bytes.Buffer)
+	for i := uint64(0); i < nchunks; i++ {
+		buf, err := fetchChunk(client, i)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(fileBuf, buf); err != nil {
+			return err
+		}
+	}
+	if int64(fileBuf.Len()) != r.IFile.Size {
+		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", r.IFile.Size, fileBuf.Len())
 	}
 	// f, err := os.Create(r.IFile.Name)
 	// if err != nil {
@@ -112,32 +129,27 @@ func onGet(args ...string) error {
 	return nil
 }
 
-func fetch(id string, nchunks uint64) (*bytes.Buffer, error) {
-	var client Client
-	if err := client.Dial(":8081"); err != nil {
-		return nil, err
-	}
-	defer client.Close()
-	if err := client.Connect(id); err != nil {
+func fetchChunk(client Client, i uint64) (*bytes.Buffer, error) {
+	chunkHash, ch, err := client.Getchunk(i)
+	if err != nil {
 		return nil, err
 	}
 	buf := new(bytes.Buffer)
-	for i := uint64(0); i < nchunks; i++ {
-		chunkHash, ch, err := client.Getchunk(i)
-		if err != nil {
+	for part := range ch {
+		if part.err != nil {
 			return nil, err
 		}
-		log.Printf("%s\n", chunkHash)
-		for part := range ch {
-			if part.err != nil {
-				return nil, err
-			}
-			_, err := buf.Write(part.piece)
-			if err != nil {
-				return nil, err
-			}
+		if _, err := buf.Write(part.piece); err != nil {
+			return nil, err
 		}
-		log.Println(buf.Len())
+	}
+	calcChunkHash, err := hash.FromChunk(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	if !calcChunkHash.Equals(chunkHash) {
+		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
+		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", i)
 	}
 	return buf, nil
 }
