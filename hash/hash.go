@@ -9,12 +9,20 @@ const HASH_ALG = "sha1"
 
 type Hash []byte
 
-func New(chunks []Hash) (Hash, error) {
+func FromChunkHashes(chunkHashes []Hash) (Hash, error) {
 	h := sha1.New()
-	for i := range chunks {
-		if _, err := h.Write(chunks[i]); err != nil {
+	for i := range chunkHashes {
+		if _, err := h.Write(chunkHashes[i]); err != nil {
 			return nil, err
 		}
+	}
+	return h.Sum(nil), nil
+}
+
+func FromChunk(chunk []byte) (Hash, error) {
+	h := sha1.New()
+	if _, err := h.Write(chunk); err != nil {
+		return nil, err
 	}
 	return h.Sum(nil), nil
 }
@@ -23,7 +31,7 @@ func (h Hash) String() string {
 	return hex.EncodeToString(h)
 }
 
-func FromString(s string) (Hash, error) {
+func FromHex(s string) (Hash, error) {
 	h, err := hex.DecodeString(s)
 	if err != nil {
 		return nil, err
