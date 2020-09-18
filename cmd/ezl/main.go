@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,11 +17,10 @@ import (
 	badger "github.com/dgraph-io/badger/v2"
 )
 
-const (
-	TRACKER_HOST = "localhost"
-	TRACKER_ADDR = "http://" + TRACKER_HOST + ":23230/"
-	SEEDER_ADDR  = "localhost:23231"
-)
+type Config struct {
+	Tracker string `json:"tracker"`
+	Seeder  string `json:"seeder"`
+}
 
 var c = cli.New(os.Args[0], []cli.Cmd{
 	cli.Cmd{
@@ -46,13 +46,23 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 })
 
 var db *badger.DB
+var cfg Config
 
 func main() {
+	var configPath string
+	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
+	flag.Parse()
+	f, err := os.Open(configPath)
+	if err != nil {
+		handleErr(err)
+	}
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		handleErr(err)
+	}
 	args := os.Args[1:]
 	if len(args) < 1 {
 		handleErr(fmt.Errorf("command not provided"))
 	}
-	var err error
 	db, err = badger.Open(badger.DefaultOptions("db").WithLogger(nil))
 	if err != nil {
 		handleErr(err)
@@ -150,13 +160,13 @@ func onAdd(args ...string) error {
 		Files: []ezt.File{
 			ezt.File{Hash: k, IFile: i},
 		},
-		Addr: SEEDER_ADDR,
+		Addr: cfg.Seeder,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(TRACKER_ADDR, "application/json", buf)
+	rsp, err := http.Post(cfg.Tracker, "application/json", buf)
 	if err != nil {
 		return err
 	}
@@ -183,7 +193,7 @@ func onRm(args ...string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", TRACKER_ADDR+"?hash="+id+"&addr="+SEEDER_ADDR, nil)
+	req, err := http.NewRequest("DELETE", cfg.Tracker+"?hash="+id+"&addr="+cfg.Seeder, nil)
 	if err != nil {
 		return err
 	}
@@ -230,13 +240,13 @@ func onSync(args ...string) error {
 	}
 	params := ezt.PostParams{
 		Files: files,
-		Addr:  SEEDER_ADDR,
+		Addr:  cfg.Seeder,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(TRACKER_ADDR, "application/json", buf)
+	rsp, err := http.Post(cfg.Tracker, "application/json", buf)
 	if err != nil {
 		return err
 	}
