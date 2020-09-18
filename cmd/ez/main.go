@@ -15,6 +15,11 @@ import (
 	"github.com/aburdulescu/go-ez/hash"
 )
 
+const (
+	TRACKER_HOST = "localhost"
+	TRACKER_ADDR = "http://" + TRACKER_HOST + ":23230/"
+)
+
 var c = cli.New(os.Args[0], []cli.Cmd{
 	cli.Cmd{
 		Name:    "ls",
@@ -48,7 +53,7 @@ func handleErr(err error) {
 }
 
 func onLs(args ...string) error {
-	rsp, err := http.Get("http://localhost:8080/?hash=all")
+	rsp, err := http.Get(TRACKER_ADDR + "?hash=all")
 	if err != nil {
 		return err
 	}
@@ -68,7 +73,7 @@ func onGet(args ...string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	rsp, err := http.Get("http://localhost:8080/?hash=" + id)
+	rsp, err := http.Get(TRACKER_ADDR + "?hash=" + id)
 	if err != nil {
 		return err
 	}
@@ -97,8 +102,9 @@ func onGet(args ...string) error {
 	// 		// add remainder chunks to one(or more) peers
 	// 	}
 	// }
+	peerAddr := r.Peers[0]
 	var client Client
-	if err := client.Dial(":8081"); err != nil {
+	if err := client.Dial(peerAddr); err != nil {
 		return err
 	}
 	defer client.Close()

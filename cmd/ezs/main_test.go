@@ -12,7 +12,7 @@ func TestConnect(t *testing.T) {
 	requests := []*ezs.Request{
 		&ezs.Request{
 			Type:    ezs.RequestType_CONNECT,
-			Payload: &ezs.Request_Id{[]byte("id")},
+			Payload: &ezs.Request_Id{"id"},
 		},
 		&ezs.Request{
 			Type:    ezs.RequestType_DISCONNECT,
@@ -27,7 +27,7 @@ func TestConnect(t *testing.T) {
 			Payload: &ezs.Request_Index{42},
 		},
 	}
-	conn, err := net.Dial("tcp", ":8081")
+	conn, err := net.Dial("tcp", ":23231")
 	if err != nil {
 		t.Fatal(err)
 	}

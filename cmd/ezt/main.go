@@ -19,7 +19,7 @@ type Server struct {
 func main() {
 	s := Server{NewKV()}
 	http.HandleFunc("/", s.handleRequest)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":23230", nil))
 }
 
 func (s Server) handleRequest(w http.ResponseWriter, r *http.Request) {

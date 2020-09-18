@@ -18,7 +18,7 @@ type Client struct {
 }
 
 func (c *Client) Dial(addr string) error {
-	conn, err := net.Dial("tcp", ":8081")
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}

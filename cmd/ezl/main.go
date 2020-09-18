@@ -16,6 +16,12 @@ import (
 	badger "github.com/dgraph-io/badger/v2"
 )
 
+const (
+	TRACKER_HOST = "localhost"
+	TRACKER_ADDR = "http://" + TRACKER_HOST + ":23230/"
+	SEEDER_ADDR  = "localhost:23231"
+)
+
 var c = cli.New(os.Args[0], []cli.Cmd{
 	cli.Cmd{
 		Name:    "ls",
@@ -144,13 +150,13 @@ func onAdd(args ...string) error {
 		Files: []ezt.File{
 			ezt.File{Hash: k, IFile: i},
 		},
-		Addr: "localhost:22334",
+		Addr: SEEDER_ADDR,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post("http://localhost:8080/", "application/json", buf)
+	rsp, err := http.Post(TRACKER_ADDR, "application/json", buf)
 	if err != nil {
 		return err
 	}
@@ -177,7 +183,7 @@ func onRm(args ...string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", "http://localhost:8080/?hash="+id+"&addr=localhost:22334", nil)
+	req, err := http.NewRequest("DELETE", TRACKER_ADDR+"?hash="+id+"&addr="+SEEDER_ADDR, nil)
 	if err != nil {
 		return err
 	}
@@ -224,13 +230,13 @@ func onSync(args ...string) error {
 	}
 	params := ezt.PostParams{
 		Files: files,
-		Addr:  "localhost:22334",
+		Addr:  SEEDER_ADDR,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post("http://localhost:8080/", "application/json", buf)
+	rsp, err := http.Post(TRACKER_ADDR, "application/json", buf)
 	if err != nil {
 		return err
 	}
