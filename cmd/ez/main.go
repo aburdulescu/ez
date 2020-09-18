@@ -77,26 +77,26 @@ func onGet(args ...string) error {
 	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
 		return err
 	}
-	peersLen := uint64(len(r.Peers))
+	// peersLen := uint64(len(r.Peers))
 	nchunks := uint64(r.IFile.Size / chunks.CHUNK_SIZE)
 	if r.IFile.Size%chunks.CHUNK_SIZE != 0 {
 		nchunks++
 	}
-	if nchunks <= peersLen {
-		// select nchunks number of peers if available
-		// ex: nchunks=10, npeers=20 => select 10 peers from the list and get from each one chunk
-		nchunksPerPeer := 1
-		log.Printf("nchunks=%d, chunksPerPeer=%d\n", nchunks, nchunksPerPeer)
-	} else {
-		// split the chunks between the available peers
-		// ex: nchunks=41, npeers=3 => split chunks between the 3 peers: peer1=13, peer2=13, peer3=15
-		nchunksPerPeer := nchunks / peersLen
-		remainder := nchunks % peersLen
-		log.Printf("nchunks=%d, chunksPerPeer=%d, remainder=%d\n", nchunks, nchunksPerPeer, remainder)
-		if remainder != 0 {
-			// add remainder chunks to one(or more) peers
-		}
-	}
+	// if nchunks <= peersLen {
+	// 	// select nchunks number of peers if available
+	// 	// ex: nchunks=10, npeers=20 => select 10 peers from the list and get from each one chunk
+	// 	nchunksPerPeer := 1
+	// 	log.Printf("nchunks=%d, chunksPerPeer=%d\n", nchunks, nchunksPerPeer)
+	// } else {
+	// 	// split the chunks between the available peers
+	// 	// ex: nchunks=41, npeers=3 => split chunks between the 3 peers: peer1=13, peer2=13, peer3=15
+	// 	nchunksPerPeer := nchunks / peersLen
+	// 	remainder := nchunks % peersLen
+	// 	log.Printf("nchunks=%d, chunksPerPeer=%d, remainder=%d\n", nchunks, nchunksPerPeer, remainder)
+	// 	if remainder != 0 {
+	// 		// add remainder chunks to one(or more) peers
+	// 	}
+	// }
 	var client Client
 	if err := client.Dial(":8081"); err != nil {
 		return err
