@@ -90,31 +90,44 @@ func onGet(args ...string) error {
 	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
 		return err
 	}
-	dist := distributeChunks(r.IFile.Size, r.Peers)
-	for k, v := range dist {
-		log.Println(k, v)
-	}
-	peerAddr := r.Peers[0]
-	var client Client
-	if err := client.Dial(peerAddr); err != nil {
+	if err := download(id, r); err != nil {
 		return err
 	}
-	defer client.Close()
-	if err := client.Connect(id); err != nil {
-		return err
+	return nil
+}
+
+func download(id string, r *ezt.GetResult) error {
+	dist, nchunks := distributeChunks(r.IFile.Size, r.Peers)
+	result := make(chan FetchResult)
+	for addr, indexes := range dist {
+		go fetch(id, addr, indexes, result)
 	}
-	fileBuf := new(bytes.Buffer)
-	nchunks := uint64(r.IFile.Size / chunks.CHUNK_SIZE)
-	if r.IFile.Size%chunks.CHUNK_SIZE != 0 {
-		nchunks++
-	}
-	for i := uint64(0); i < nchunks; i++ {
-		buf, err := fetchChunk(client, i)
-		if err != nil {
-			return err
+	chunkData := make(map[uint64]ChunkData, nchunks)
+	for i := 0; i < len(dist); i++ {
+		fetchRes := <-result
+		if fetchRes.err != nil {
+			continue
 		}
-		if _, err := io.Copy(fileBuf, buf); err != nil {
-			return err
+		for k, v := range fetchRes.chunks {
+			chunkData[k] = v
+		}
+	}
+	log.Println(len(chunkData))
+	fileBuf := new(bytes.Buffer)
+	for i := uint64(0); i < nchunks; i++ {
+		d, ok := chunkData[i]
+		if !ok {
+			log.Printf("chunk index %d not found\n", i)
+			continue
+		}
+		if d.err != nil {
+			log.Println(i, d.err)
+			continue
+		}
+		log.Println(d.buf.Len())
+		if _, err := io.Copy(fileBuf, d.buf); err != nil {
+			log.Println(i, d.err)
+			continue
 		}
 	}
 	if int64(fileBuf.Len()) != r.IFile.Size {
@@ -131,7 +144,7 @@ func onGet(args ...string) error {
 	return nil
 }
 
-func distributeChunks(fileSize int64, peers []string) map[string][]uint64 {
+func distributeChunks(fileSize int64, peers []string) (map[string][]uint64, uint64) {
 	peersLen := uint64(len(peers))
 	nchunks := uint64(fileSize / chunks.CHUNK_SIZE)
 	if fileSize%chunks.CHUNK_SIZE != 0 {
@@ -144,7 +157,7 @@ func distributeChunks(fileSize int64, peers []string) map[string][]uint64 {
 		for i := uint64(0); i < nchunks; i++ {
 			dist[peers[i]] = []uint64{i}
 		}
-		return dist
+		return dist, nchunks
 	} else {
 		// split the chunks between the available peers
 		// ex: nchunks=41, npeers=3 => split chunks between the 3 peers: peer1=13, peer2=13, peer3=15
@@ -168,45 +181,49 @@ func distributeChunks(fileSize int64, peers []string) map[string][]uint64 {
 				peerIdx--
 			}
 		}
-		return dist
+		return dist, nchunks
 	}
 }
 
 type ChunkData struct {
-	err   error
-	index uint64
-	buf   *bytes.Buffer
+	err error
+	buf *bytes.Buffer
 }
 
 type FetchResult struct {
 	err    error
-	chunks []ChunkData
+	chunks map[uint64]ChunkData
 }
 
 func fetch(id, addr string, indexes []uint64, r chan FetchResult) {
+	log.Println(addr, indexes)
 	var client Client
 	if err := client.Dial(addr); err != nil {
+		log.Printf("%s: %v", addr, err)
 		r <- FetchResult{err, nil}
 		return
 	}
 	defer client.Close()
 	if err := client.Connect(id); err != nil {
+		log.Printf("%s: %v", addr, err)
 		r <- FetchResult{err, nil}
 		return
 	}
-	var chunkData []ChunkData
+	chunkData := make(map[uint64]ChunkData, len(indexes))
 	resultBuf := new(bytes.Buffer)
 	for _, v := range indexes {
-		buf, err := fetchChunk(client, v)
+		buf, err := fetchChunk(client, v) // TODO: do this in a separate goroutine
 		if err != nil {
-			chunkData = append(chunkData, ChunkData{err, v, nil})
+			log.Printf("%s: %d: %v", addr, v, err)
+			chunkData[v] = ChunkData{err, nil}
 			continue
 		}
 		if _, err := io.Copy(resultBuf, buf); err != nil {
-			chunkData = append(chunkData, ChunkData{err, v, nil})
+			log.Printf("%s: %d: %v", addr, v, err)
+			chunkData[v] = ChunkData{err, nil}
 			return
 		}
-		chunkData = append(chunkData, ChunkData{nil, v, buf})
+		chunkData[v] = ChunkData{nil, buf}
 	}
 	r <- FetchResult{nil, chunkData}
 }
