@@ -1,4 +1,4 @@
-.PHONY: build test clean
+.PHONY: build test clean docker
 
 build:
 	cd cli && go build
@@ -23,3 +23,6 @@ clean:
 	cd cmd/ez && go clean
 	cd cmd/ezt && go clean
 	cd cmd/ezs && go clean
+
+docker:
+	docker build -t ez_base:latest .
