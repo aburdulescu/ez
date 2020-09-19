@@ -1,4 +1,5 @@
 {
     "tracker": "http://localhost:23230/",
-    "seeder": "localhost:23231"
+    "seeder": "localhost:23231",
+    "dbpath": "./db"
 }

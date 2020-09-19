@@ -20,6 +20,7 @@ import (
 type Config struct {
 	Tracker string `json:"tracker"`
 	Seeder  string `json:"seeder"`
+	DBPath  string `json:"dbpath"`
 }
 
 var c = cli.New(os.Args[0], []cli.Cmd{
@@ -63,7 +64,7 @@ func main() {
 	if len(args) < 1 {
 		handleErr(fmt.Errorf("command not provided"))
 	}
-	db, err = badger.Open(badger.DefaultOptions("db").WithLogger(nil))
+	db, err = badger.Open(badger.DefaultOptions(cfg.DBPath).WithLogger(nil))
 	if err != nil {
 		handleErr(err)
 	}
