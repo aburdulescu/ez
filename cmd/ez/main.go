@@ -112,7 +112,7 @@ func download(id string, r *ezt.GetResult) error {
 			chunkData[k] = v
 		}
 	}
-	fileBuf := new(bytes.Buffer)
+	buf := new(bytes.Buffer)
 	for i := uint64(0); i < nchunks; i++ {
 		d, ok := chunkData[i]
 		if !ok {
@@ -123,22 +123,22 @@ func download(id string, r *ezt.GetResult) error {
 			log.Println(i, d.err)
 			continue
 		}
-		if _, err := io.Copy(fileBuf, d.buf); err != nil {
+		if _, err := io.Copy(buf, d.buf); err != nil {
 			log.Println(i, d.err)
 			continue
 		}
 	}
-	if int64(fileBuf.Len()) != r.IFile.Size {
-		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", r.IFile.Size, fileBuf.Len())
+	if int64(buf.Len()) != r.IFile.Size {
+		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", r.IFile.Size, buf.Len())
 	}
-	// f, err := os.Create(r.IFile.Name)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer f.Close()
-	// if _, err := io.Copy(f, buf); err != nil {
-	// 	return err
-	// }
+	f, err := os.Create(r.IFile.Name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err := io.Copy(f, buf); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -194,7 +194,6 @@ type FetchResult struct {
 }
 
 func fetch(id, addr string, indexes []uint64, r chan FetchResult) {
-	log.Println(addr, indexes)
 	var client Client
 	if err := client.Dial(addr); err != nil {
 		log.Printf("%s: %v", addr, err)
