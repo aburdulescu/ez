@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -50,10 +49,7 @@ var db *badger.DB
 var cfg Config
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
-	flag.Parse()
-	f, err := os.Open(configPath)
+	f, err := os.Open("ezl.json")
 	if err != nil {
 		handleErr(err)
 	}
