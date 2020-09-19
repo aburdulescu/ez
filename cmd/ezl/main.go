@@ -18,9 +18,9 @@ import (
 )
 
 type Config struct {
-	Tracker string `json:"tracker"`
-	Seeder  string `json:"seeder"`
-	DBPath  string `json:"dbpath"`
+	TrackerURL string `json:"trackerUrl"`
+	SeederAddr string `json:"seederAddr"`
+	DBPath     string `json:"dbPath"`
 }
 
 var c = cli.New(os.Args[0], []cli.Cmd{
@@ -161,13 +161,13 @@ func onAdd(args ...string) error {
 		Files: []ezt.File{
 			ezt.File{Hash: k, IFile: i},
 		},
-		Addr: cfg.Seeder,
+		Addr: cfg.SeederAddr,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(cfg.Tracker, "application/json", buf)
+	rsp, err := http.Post(cfg.TrackerURL, "application/json", buf)
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func onRm(args ...string) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", cfg.Tracker+"?hash="+id+"&addr="+cfg.Seeder, nil)
+	req, err := http.NewRequest("DELETE", cfg.TrackerURL+"?hash="+id+"&addr="+cfg.SeederAddr, nil)
 	if err != nil {
 		return err
 	}
@@ -241,13 +241,13 @@ func onSync(args ...string) error {
 	}
 	params := ezt.PostParams{
 		Files: files,
-		Addr:  cfg.Seeder,
+		Addr:  cfg.SeederAddr,
 	}
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(cfg.Tracker, "application/json", buf)
+	rsp, err := http.Post(cfg.TrackerURL, "application/json", buf)
 	if err != nil {
 		return err
 	}

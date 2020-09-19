@@ -1,4 +1,4 @@
 {
-    "listenaddr": ":23231",
-    "dbpath": "../ezl/db"
+    "listenAddr": ":23231",
+    "dbPath": "../ezl/db"
 }

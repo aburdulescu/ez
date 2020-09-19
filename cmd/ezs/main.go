@@ -14,8 +14,8 @@ import (
 )
 
 type Config struct {
-	ListenAddr string `json:"listenaddr"`
-	DBPath     string `json:"dbpath"`
+	ListenAddr string `json:"listenAddr"`
+	DBPath     string `json:"dbPath"`
 }
 
 func main() {

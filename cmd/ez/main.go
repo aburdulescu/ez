@@ -17,7 +17,7 @@ import (
 )
 
 type Config struct {
-	Tracker string `json:"tracker"`
+	TrackerURL string `json:"trackerUrl"`
 }
 
 var c = cli.New(os.Args[0], []cli.Cmd{
@@ -65,7 +65,7 @@ func handleErr(err error) {
 }
 
 func onLs(args ...string) error {
-	rsp, err := http.Get(cfg.Tracker + "?hash=all")
+	rsp, err := http.Get(cfg.TrackerURL + "?hash=all")
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func onGet(args ...string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	rsp, err := http.Get(cfg.Tracker + "?hash=" + id)
+	rsp, err := http.Get(cfg.TrackerURL + "?hash=" + id)
 	if err != nil {
 		return err
 	}
