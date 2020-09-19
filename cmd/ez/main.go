@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -36,10 +35,7 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 var cfg Config
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
-	flag.Parse()
-	f, err := os.Open(configPath)
+	f, err := os.Open("ez.json")
 	if err != nil {
 		handleErr(err)
 	}
