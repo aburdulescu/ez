@@ -22,6 +22,18 @@ build() {
 
     docker build -t ez_tracker -f dockerfiles/Dockerfile.tracker .
 
+    rm -rf files
+    mkdir -p files
+    cd files
+    files_length=$(echo $files | jq "length")
+    for i in $(seq 0 $(($files_length-1)))
+    do
+        name=$(echo $files | jq -r ".[$i].name")
+        size=$(echo $files | jq -r ".[$i].size")
+        ./../scripts/mkf.sh $name $size
+    done
+    cd -
+
     rm -f seeder-entrypoint.sh
     echo $cfg | tpl -t templates/seeder-entrypoint.sh > seeder-entrypoint.sh
     chmod +x seeder-entrypoint.sh
@@ -48,6 +60,7 @@ run() {
     docker run \
            --rm \
            -d \
+           -v $(pwd)/files/:/go-ez/files/ \
            --network $subnet_name \
            --ip $ip \
            --name $img \
