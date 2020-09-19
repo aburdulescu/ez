@@ -10,9 +10,9 @@ subnet_ip_prefix=$(echo $subnet_ip|cut -d "." -f "1,2,3")"."
 tracker_ip=$subnet_ip_prefix"254"
 
 build() {
-
     subnet_mask=$(echo $cfg | jq -r ".subnet.mask")
     seeder_dbpath=$(echo $cfg | jq -r ".seederDbPath")
+    files=$(echo $cfg | jq -r ".files")
     tracker_url="http://"$tracker_ip":23230/"
 
     ezl_json_fmt="{\"trackerUrl\":\"%s\",\"seederAddr\":\"%s\",\"dbPath\":\"%s\"}"
@@ -21,6 +21,10 @@ build() {
     docker network inspect $subnet_name 1>>/dev/null 2>>/dev/null || docker network create --subnet "$subnet_ip$subnet_mask" $subnet_name
 
     docker build -t ez_tracker -f dockerfiles/Dockerfile.tracker .
+
+    rm -f seeder-entrypoint.sh
+    echo $cfg | tpl -t templates/seeder-entrypoint.sh > seeder-entrypoint.sh
+    chmod +x seeder-entrypoint.sh
 
     config_dir=config
     rm -rf $config_dir
@@ -32,7 +36,9 @@ build() {
         printf $ezs_json_fmt ":23231" $seeder_dbpath | tpl -t templates/ezs.json.tpl > $config_dir/ezs.json
         docker build -t ez_seeder_$i -f dockerfiles/Dockerfile.seeder .
     done
+
     rm -rf $config_dir
+    rm seeder-entrypoint.sh
 }
 
 run() {

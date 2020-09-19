@@ -1,6 +1,9 @@
 FROM ez_base
 
+COPY scripts/addFile.sh /usr/local/bin/addFile.sh
+COPY scripts/mkf.sh /go-ez/bin/mkf.sh
 COPY config/ezl.json /go-ez/config/ezl.json
 COPY config/ezs.json /go-ez/config/ezs.json
+COPY seeder-entrypoint.sh /entrypoint.sh
 
-ENTRYPOINT ["/go-ez/bin/ezs", "--config", "/go-ez/config/ezs.json"]
+ENTRYPOINT ["/entrypoint.sh"]
