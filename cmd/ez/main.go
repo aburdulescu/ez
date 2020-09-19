@@ -112,7 +112,6 @@ func download(id string, r *ezt.GetResult) error {
 			chunkData[k] = v
 		}
 	}
-	log.Println(len(chunkData))
 	fileBuf := new(bytes.Buffer)
 	for i := uint64(0); i < nchunks; i++ {
 		d, ok := chunkData[i]
@@ -124,7 +123,6 @@ func download(id string, r *ezt.GetResult) error {
 			log.Println(i, d.err)
 			continue
 		}
-		log.Println(d.buf.Len())
 		if _, err := io.Copy(fileBuf, d.buf); err != nil {
 			log.Println(i, d.err)
 			continue
@@ -210,18 +208,12 @@ func fetch(id, addr string, indexes []uint64, r chan FetchResult) {
 		return
 	}
 	chunkData := make(map[uint64]ChunkData, len(indexes))
-	resultBuf := new(bytes.Buffer)
 	for _, v := range indexes {
 		buf, err := fetchChunk(client, v) // TODO: do this in a separate goroutine
 		if err != nil {
 			log.Printf("%s: %d: %v", addr, v, err)
 			chunkData[v] = ChunkData{err, nil}
 			continue
-		}
-		if _, err := io.Copy(resultBuf, buf); err != nil {
-			log.Printf("%s: %d: %v", addr, v, err)
-			chunkData[v] = ChunkData{err, nil}
-			return
 		}
 		chunkData[v] = ChunkData{nil, buf}
 	}
