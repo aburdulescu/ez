@@ -17,7 +17,14 @@ WORKDIR /go-ez
 RUN GOOS=linux GOARCH=amd64 make clean && make
 
 FROM debian:testing-slim
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y \
+    procps \
+    iproute2 \
+    iputils-ping \
+    netcat
 COPY --from=builder /go-ez/cmd/ez/ez /go-ez/bin/ez
-COPY --from=builder /go-ez/cmd/ezl/ezl /go-ez/bin/cli/ezl
+COPY --from=builder /go-ez/cmd/ezl/ezl /go-ez/bin/ezl
 COPY --from=builder /go-ez/cmd/ezs/ezs /go-ez/bin/ezs
 COPY --from=builder /go-ez/cmd/ezt/ezt /go-ez/bin/ezt
