@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,6 +21,9 @@ type Config struct {
 }
 
 func main() { // TODO: figure out a way to profile this program while it is running
+	go func() {
+		log.Println(http.ListenAndServe(":8080", nil)) // TODO: test if it really works
+	}()
 	var configPath string
 	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
 	flag.Parse()
