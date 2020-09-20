@@ -73,14 +73,12 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 }
 
 func ReadPbMsg(c net.Conn) ([]byte, error) {
-	b := make([]byte, 2)
-	_, err := io.ReadAtLeast(c, b, 2)
+	msgsize, err := getPbMsgSize(c)
 	if err != nil {
 		return nil, err
 	}
-	msgsize := binary.LittleEndian.Uint16(b)
 	buf := new(bytes.Buffer)
-	buf.Grow(int(msgsize))
+	buf.Grow(msgsize)
 	n, err := io.CopyN(buf, c, int64(msgsize))
 	if err != nil {
 		log.Println(n, err)
@@ -89,39 +87,48 @@ func ReadPbMsg(c net.Conn) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ReadPbMsg_new(c net.Conn) ([]byte, error) {
+func getPbMsgSize(c net.Conn) (int, error) {
 	b := make([]byte, 2)
 	_, err := io.ReadAtLeast(c, b, 2)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
 	msgsize := binary.LittleEndian.Uint16(b)
-	src := io.LimitReader(c, int64(msgsize))
-	piece, err := readPiece(src, int(msgsize))
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	return piece, nil
+	return int(msgsize), nil
 }
 
-func readPiece(r io.Reader, size int) ([]byte, error) { // TODO: make this work to avoid allocations made in bytes.Buffer.ReadFrom
-	buf := make([]byte, size)
+func ReadPbMsg_new(c net.Conn) ([]byte, error) {
+	msgsize, err := getPbMsgSize(c)
+	if err != nil {
+		return nil, err
+	}
+	src := io.LimitReader(c, int64(msgsize))
+	piece := make([]byte, msgsize)
+	n, err := readPiece(piece, src)
+	if err != nil {
+		log.Println(n, err)
+		return nil, err
+	}
+	return piece[:n], nil
+}
+
+func readPiece(buf []byte, r io.Reader) (int, error) { // TODO: make this work to avoid allocations made in bytes.Buffer.ReadFrom
 	nread := 0
 	b := buf
 	for {
 		n, err := r.Read(b)
-		if n < size {
-			log.Println(n)
-		}
 		nread += n
-		if err != nil {
-			return nil, err
+		if err == io.EOF {
+			return nread, nil
 		}
-		if nread == size {
-			return buf, nil
+		if err != nil {
+			return nread, err
+		}
+		if nread == len(buf) {
+			return nread, nil
 		}
 		b = b[:nread]
+		log.Println(len(buf)-nread, r.(*io.LimitedReader).N)
 	}
 }
 
@@ -130,7 +137,7 @@ func (c Client) handleGetchunk(npieces uint64, ch chan GetchunkPart) {
 	for i := uint64(0); i < npieces; i++ {
 		b, err := ReadPbMsg(c.conn)
 		if err != nil {
-			log.Println(err) // TODO: sometimes the read fails because nread < size specified in header
+			log.Println(err)
 			ch <- GetchunkPart{nil, err}
 			return
 		}
