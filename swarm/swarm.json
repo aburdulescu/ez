@@ -5,7 +5,7 @@
         "mask": "/24"
     },
     "seederDbPath": "/tmp/db",
-    "numSeeders": 5,
+    "numSeeders": 4,
     "files": [
         {
             "name": "f1MB",
