@@ -8,7 +8,7 @@ import (
 
 const HASH_ALG = "xxh3"
 
-type Hash uint64
+type Hash uint64 // TODO: this should be []byte
 
 func FromChunkHashes(chunkHashes []Hash) Hash {
 	var data []byte
