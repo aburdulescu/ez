@@ -35,6 +35,13 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 var cfg Config
 
 func main() {
+	// uncomment when profile is needed
+	// perfcpu, err := os.Create("perf.cpu")
+	// if err != nil {
+	// 	handleErr(err)
+	// }
+	// pprof.StartCPUProfile(perfcpu)
+	// defer pprof.StopCPUProfile()
 	f, err := os.Open("ez.json")
 	if err != nil {
 		handleErr(err)
@@ -113,6 +120,7 @@ func download(id string, r *ezt.GetResult) error {
 		}
 	}
 	buf := new(bytes.Buffer)
+	buf.Grow(int(r.IFile.Size))
 	for i := uint64(0); i < nchunks; i++ {
 		d, ok := chunkData[i]
 		if !ok {
@@ -225,6 +233,7 @@ func fetchChunk(client Client, i uint64) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	buf := new(bytes.Buffer)
+	buf.Grow(chunks.CHUNK_SIZE)
 	for part := range ch {
 		if part.err != nil {
 			return nil, err

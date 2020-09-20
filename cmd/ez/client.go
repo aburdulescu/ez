@@ -80,12 +80,49 @@ func ReadPbMsg(c net.Conn) ([]byte, error) {
 	}
 	msgsize := binary.LittleEndian.Uint16(b)
 	buf := new(bytes.Buffer)
+	buf.Grow(int(msgsize))
 	n, err := io.CopyN(buf, c, int64(msgsize))
 	if err != nil {
 		log.Println(n, err)
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func ReadPbMsg_new(c net.Conn) ([]byte, error) {
+	b := make([]byte, 2)
+	_, err := io.ReadAtLeast(c, b, 2)
+	if err != nil {
+		return nil, err
+	}
+	msgsize := binary.LittleEndian.Uint16(b)
+	src := io.LimitReader(c, int64(msgsize))
+	piece, err := readPiece(src, int(msgsize))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return piece, nil
+}
+
+func readPiece(r io.Reader, size int) ([]byte, error) { // TODO: make this work to avoid allocations made in bytes.Buffer.ReadFrom
+	buf := make([]byte, size)
+	nread := 0
+	b := buf
+	for {
+		n, err := r.Read(b)
+		if n < size {
+			log.Println(n)
+		}
+		nread += n
+		if err != nil {
+			return nil, err
+		}
+		if nread == size {
+			return buf, nil
+		}
+		b = b[:nread]
+	}
 }
 
 func (c Client) handleGetchunk(npieces uint64, ch chan GetchunkPart) {
