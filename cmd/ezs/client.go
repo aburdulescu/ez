@@ -154,7 +154,7 @@ func (c Client) handleGetchunk(index uint64) error {
 		Type: ezs.ResponseType_CHUNKHASH,
 		Payload: &ezs.Response_Chunkhash{
 			&ezs.Chunkhash{
-				Hash:    uint64(chunkHashes[index]),
+				Hash:    []byte(chunkHashes[index]),
 				Npieces: npieces,
 			},
 		},

@@ -1,31 +1,46 @@
 package hash
 
 import (
-	"strconv"
+	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/zeebo/xxh3"
 )
 
-const HASH_ALG = "xxh3"
+const (
+	ALG  = "xxh3"
+	SIZE = 8
+)
 
-type Hash uint64 // TODO: this should be []byte
+type Hash []byte
 
 func FromChunkHashes(chunkHashes []Hash) Hash {
 	var data []byte
 	for i := range chunkHashes {
-		data = append(data, []byte(chunkHashes[i].String())...)
+		data = append(data, chunkHashes[i]...)
 	}
-	return Hash(xxh3.Hash(data))
+	return fromUint64(xxh3.Hash(data))
+}
+
+func fromUint64(u uint64) []byte {
+	h := make(Hash, SIZE)
+	binary.BigEndian.PutUint64(h, u)
+	return h
 }
 
 func FromChunk(chunk []byte) Hash {
-	return Hash(xxh3.Hash(chunk))
+	return fromUint64(xxh3.Hash(chunk))
 }
 
 func (h Hash) String() string {
-	return strconv.FormatUint(uint64(h), 10)
+	return hex.EncodeToString(h)
 }
 
 func (h Hash) Equals(other Hash) bool {
-	return (h == other)
+	for i := range h {
+		if h[i] != other[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -34,7 +34,7 @@ message Response {
 }
 
 message Chunkhash {
-    uint64 hash = 1;
+    bytes hash = 1;
     uint64 npieces = 2;
 }
 

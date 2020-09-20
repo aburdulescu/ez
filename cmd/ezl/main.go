@@ -137,7 +137,7 @@ func onAdd(args ...string) error {
 	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
 		return err
 	}
-	k := hash.HASH_ALG + "-" + h.String()
+	k := hash.ALG + "-" + h.String()
 	err = db.Update(func(txn *badger.Txn) error {
 		err := txn.Set([]byte(k+".ifile"), ifileBuf.Bytes())
 		if err != nil {
