@@ -23,6 +23,7 @@ clean:
 	cd cmd/ez && go clean
 	cd cmd/ezt && go clean
 	cd cmd/ezs && go clean
+	find -type f -name "f*B" | xargs rm -f
 
 docker:
 	docker build -t ez_base:latest .
