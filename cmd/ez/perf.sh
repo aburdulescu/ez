@@ -11,7 +11,7 @@ case $1 in
     "run")
         clean
         go build -ldflags "-s -w"
-        /usr/bin/time -f "%E %MKB" ./ez get sha1-a4b4b44140b5ca06ee075e21ca002eea287587bb
+        /usr/bin/time -f "%E %MKB" ./ez get $2
     ;;
     *)
     ;;

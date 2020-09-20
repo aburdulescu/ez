@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime/pprof"
 
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
@@ -36,12 +37,12 @@ var cfg Config
 
 func main() {
 	// uncomment when profile is needed
-	// perfcpu, err := os.Create("perf.cpu")
-	// if err != nil {
-	// 	handleErr(err)
-	// }
-	// pprof.StartCPUProfile(perfcpu)
-	// defer pprof.StopCPUProfile()
+	perfcpu, err := os.Create("perf.cpu")
+	if err != nil {
+		handleErr(err)
+	}
+	pprof.StartCPUProfile(perfcpu)
+	defer pprof.StopCPUProfile()
 	f, err := os.Open("ez.json")
 	if err != nil {
 		handleErr(err)
@@ -242,10 +243,7 @@ func fetchChunk(client Client, i uint64) (*bytes.Buffer, error) {
 			return nil, err
 		}
 	}
-	calcChunkHash, err := hash.FromChunk(buf.Bytes())
-	if err != nil {
-		return nil, err
-	}
+	calcChunkHash := hash.FromChunk(buf.Bytes())
 	if !calcChunkHash.Equals(chunkHash) {
 		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
 		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", i)

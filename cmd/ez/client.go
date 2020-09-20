@@ -60,11 +60,11 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 	rsp, err := c.send(req, true)
 	if err != nil {
 		log.Println(err)
-		return nil, nil, err
+		return 0, nil, err
 	}
 	rspType := rsp.GetType()
 	if rspType != ezs.ResponseType_CHUNKHASH {
-		return nil, nil, fmt.Errorf("unexpected response: %s", rspType)
+		return 0, nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
 	chunkhashMsg := rsp.GetChunkhash()
 	ch := make(chan GetchunkPart)

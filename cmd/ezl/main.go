@@ -125,7 +125,7 @@ func onAdd(args ...string) error {
 	if err != nil {
 		return err
 	}
-	h, err := hash.FromChunkHashes(chunks)
+	h := hash.FromChunkHashes(chunks)
 	if err != nil {
 		return err
 	}

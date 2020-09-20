@@ -1,49 +1,31 @@
 package hash
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
+	"strconv"
+
+	"github.com/zeebo/xxh3"
 )
 
-const HASH_ALG = "sha1" // TODO: use not-crypto hash(xxhash)?
+const HASH_ALG = "xxh3"
 
-type Hash []byte
+type Hash uint64
 
-func FromChunkHashes(chunkHashes []Hash) (Hash, error) {
-	h := sha1.New()
+func FromChunkHashes(chunkHashes []Hash) Hash {
+	var data []byte
 	for i := range chunkHashes {
-		if _, err := h.Write(chunkHashes[i]); err != nil {
-			return nil, err
-		}
+		data = append(data, []byte(chunkHashes[i].String())...)
 	}
-	return h.Sum(nil), nil
+	return Hash(xxh3.Hash(data))
 }
 
-func FromChunk(chunk []byte) (Hash, error) {
-	h := sha1.New()
-	if _, err := h.Write(chunk); err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
+func FromChunk(chunk []byte) Hash {
+	return Hash(xxh3.Hash(chunk))
 }
 
 func (h Hash) String() string {
-	return hex.EncodeToString(h)
-}
-
-func FromHex(s string) (Hash, error) {
-	h, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-	return h, nil
+	return strconv.FormatUint(uint64(h), 10)
 }
 
 func (h Hash) Equals(other Hash) bool {
-	for i := range h {
-		if h[i] != other[i] {
-			return false
-		}
-	}
-	return true
+	return (h == other)
 }

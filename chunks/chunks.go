@@ -1,7 +1,7 @@
 package chunks
 
 import (
-	"crypto/sha1"
+	"bytes"
 	"io"
 	"math"
 	"os"
@@ -20,22 +20,23 @@ func FromFile(f *os.File, size int64) ([]hash.Hash, error) {
 	}
 	nchunks := int64(math.Ceil(float64(size) / float64(CHUNK_SIZE)))
 	chunks := make([]hash.Hash, nchunks)
-	h := sha1.New()
+	buf := new(bytes.Buffer)
+	buf.Grow(CHUNK_SIZE)
 	for i := int64(0); i < nchunks-leftover; i++ {
-		_, err := io.CopyN(h, f, CHUNK_SIZE)
+		_, err := io.CopyN(buf, f, CHUNK_SIZE)
 		if err != nil {
 			return nil, err
 		}
-		chunks[i] = h.Sum(nil)
-		h.Reset()
+		chunks[i] = hash.FromChunk(buf.Bytes())
+		buf.Reset()
 	}
 	if leftover == 1 {
-		_, err := io.CopyN(h, f, remainder)
+		_, err := io.CopyN(buf, f, remainder)
 		if err != nil {
 			return nil, err
 		}
-		chunks[len(chunks)-1] = h.Sum(nil)
-		h.Reset()
+		chunks[len(chunks)-1] = hash.FromChunk(buf.Bytes())
+		buf.Reset()
 	}
 	return chunks, nil
 }
