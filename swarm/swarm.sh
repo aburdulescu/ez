@@ -67,6 +67,14 @@ run() {
            $img
 }
 
+clean() {
+    docker image rm -f ez_tracker
+    for i in $(seq 1 $num_seeders)
+    do
+        docker image rm -f ez_seeder_$i
+    done
+}
+
 start() {
     run $tracker_ip ez_tracker
     for i in $(seq 1 $num_seeders)
@@ -89,6 +97,9 @@ stop() {
 case $1 in
     "build")
         build
+        ;;
+    "clean")
+        clean
         ;;
     "start")
         start
