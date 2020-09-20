@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 )
 
-const HASH_ALG = "sha1"
+const HASH_ALG = "sha1" // TODO: use not-crypto hash(xxhash)?
 
 type Hash []byte
 
