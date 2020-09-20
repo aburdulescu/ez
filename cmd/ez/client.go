@@ -97,7 +97,7 @@ func getPbMsgSize(c net.Conn) (int, error) {
 	return int(msgsize), nil
 }
 
-func ReadPbMsg_new(c net.Conn) ([]byte, error) {
+func ReadPbMsg_without_iocopy(c net.Conn) ([]byte, error) {
 	msgsize, err := getPbMsgSize(c)
 	if err != nil {
 		return nil, err

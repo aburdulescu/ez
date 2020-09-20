@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"runtime/pprof"
 
 	"github.com/aburdulescu/go-ez/chunks"
@@ -41,8 +42,21 @@ func main() {
 	if err != nil {
 		handleErr(err)
 	}
+	defer perfcpu.Close()
+	perfmem, err := os.Create("perf.mem")
+	if err != nil {
+		handleErr(err)
+	}
+	defer perfmem.Close()
 	pprof.StartCPUProfile(perfcpu)
 	defer pprof.StopCPUProfile()
+	defer func() {
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(perfmem); err != nil {
+			handleErr(err)
+		}
+	}()
+
 	f, err := os.Open("ez.json")
 	if err != nil {
 		handleErr(err)
