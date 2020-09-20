@@ -8,6 +8,8 @@ subnet_ip=$(echo $cfg | jq -r ".subnet.ip")
 num_seeders=$(echo $cfg | jq -r ".numSeeders")
 subnet_ip_prefix=$(echo $subnet_ip|cut -d "." -f "1,2,3")"."
 tracker_ip=$subnet_ip_prefix"254"
+files_dir=/tmp/ez/files
+swarm_dir=$(pwd)
 
 build() {
     subnet_mask=$(echo $cfg | jq -r ".subnet.mask")
@@ -22,15 +24,15 @@ build() {
 
     docker build -t ez_tracker -f dockerfiles/Dockerfile.tracker .
 
-    rm -rf files
-    mkdir -p files
-    cd files
+    rm -rf $files_dir
+    mkdir -p $files_dir
+    cd $files_dir
     files_length=$(echo $files | jq "length")
     for i in $(seq 0 $(($files_length-1)))
     do
         name=$(echo $files | jq -r ".[$i].name")
         size=$(echo $files | jq -r ".[$i].size")
-        ./../scripts/mkf.sh $name $size
+        $swarm_dir/scripts/mkf.sh $name $size
     done
     cd -
 
@@ -60,7 +62,7 @@ run() {
     docker run \
            --rm \
            -d \
-           -v $(pwd)/files/:/go-ez/files/ \
+           -v $files_dir:/go-ez/files \
            --network $subnet_name \
            --ip $ip \
            --name $img \
