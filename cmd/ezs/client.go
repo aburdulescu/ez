@@ -195,7 +195,7 @@ func (c Client) handleGetchunk(index uint64) error {
 	return nil
 }
 
-var chunkPool = sync.Pool{
+var chunkPool = sync.Pool{ // TODO: maybe not so good an idea, seems to increase the memory of the program
 	New: func() interface{} {
 		return make([]byte, chunks.CHUNK_SIZE)
 	},
