@@ -25,5 +25,5 @@ clean:
 	cd cmd/ezs && go clean
 	find -type f -name "f*B" | xargs rm -f
 
-docker:
+docker: clean
 	docker build -t ez_base:latest .
