@@ -134,8 +134,11 @@ func download(id string, r *ezt.GetResult) error {
 			chunkData[k] = v
 		}
 	}
-	buf := new(bytes.Buffer)
-	buf.Grow(int(r.IFile.Size))
+	f, err := os.Create(r.IFile.Name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 	for i := uint64(0); i < nchunks; i++ {
 		d, ok := chunkData[i]
 		if !ok {
@@ -146,21 +149,17 @@ func download(id string, r *ezt.GetResult) error {
 			log.Println(i, d.err)
 			continue
 		}
-		if _, err := io.Copy(buf, d.buf); err != nil {
+		if _, err := io.Copy(f, d.buf); err != nil {
 			log.Println(i, d.err)
 			continue
 		}
 	}
-	if int64(buf.Len()) != r.IFile.Size {
-		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", r.IFile.Size, buf.Len())
-	}
-	f, err := os.Create(r.IFile.Name)
+	fi, err := f.Stat()
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err := io.Copy(f, buf); err != nil {
-		return err
+	if fi.Size() != r.IFile.Size {
+		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", r.IFile.Size, fi.Size())
 	}
 	return nil
 }
