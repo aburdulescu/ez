@@ -14,6 +14,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/profile v1.5.0
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/sys v0.0.0-20200915084602-288bc346aa39 // indirect
 	google.golang.org/protobuf v1.25.0
