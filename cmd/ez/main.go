@@ -14,7 +14,6 @@ import (
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezt"
-	"github.com/aburdulescu/go-ez/hash"
 )
 
 type Config struct {
@@ -230,7 +229,7 @@ func fetch(id, addr string, indexes []uint64, r chan FetchResult) {
 	}
 	chunkData := make(map[uint64]ChunkData, len(indexes))
 	for _, v := range indexes {
-		buf, err := fetchChunk(client, v) // TODO: do this in a separate goroutine
+		buf, err := client.Getchunk(v) // TODO: do this in a separate goroutine
 		if err != nil {
 			log.Printf("%s: %d: %v", addr, v, err)
 			chunkData[v] = ChunkData{err, nil}
@@ -239,27 +238,4 @@ func fetch(id, addr string, indexes []uint64, r chan FetchResult) {
 		chunkData[v] = ChunkData{nil, buf}
 	}
 	r <- FetchResult{nil, chunkData}
-}
-
-func fetchChunk(client Client, i uint64) (*bytes.Buffer, error) {
-	chunkHash, ch, err := client.Getchunk(i)
-	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	buf.Grow(chunks.CHUNK_SIZE)
-	for part := range ch {
-		if part.err != nil {
-			return nil, err
-		}
-		if _, err := buf.Write(part.piece); err != nil {
-			return nil, err
-		}
-	}
-	calcChunkHash := hash.FromChunk(buf.Bytes())
-	if !calcChunkHash.Equals(chunkHash) {
-		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
-		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", i)
-	}
-	return buf, nil
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/ezs"
 	"github.com/aburdulescu/go-ez/hash"
 	"google.golang.org/protobuf/proto"
@@ -47,12 +48,7 @@ func (c Client) Connect(id string) error {
 	return nil
 }
 
-type GetchunkPart struct {
-	piece []byte
-	err   error
-}
-
-func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
+func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	req := &ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
@@ -60,16 +56,38 @@ func (c Client) Getchunk(index uint64) (hash.Hash, chan GetchunkPart, error) {
 	rsp, err := c.send(req, true)
 	if err != nil {
 		log.Println(err)
-		return nil, nil, err
+		return nil, err
 	}
 	rspType := rsp.GetType()
 	if rspType != ezs.ResponseType_CHUNKHASH {
-		return nil, nil, fmt.Errorf("unexpected response: %s", rspType)
+		return nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
 	chunkhashMsg := rsp.GetChunkhash()
-	ch := make(chan GetchunkPart)
-	go c.handleGetchunk(chunkhashMsg.GetNpieces(), ch)
-	return hash.Hash(chunkhashMsg.GetHash()), ch, nil
+	npieces := chunkhashMsg.GetNpieces()
+	buf := new(bytes.Buffer)
+	buf.Grow(chunks.CHUNK_SIZE)
+	for i := uint64(0); i < npieces; i++ {
+		b, err := ReadPbMsg(c.conn)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		rsp := &ezs.Piece{}
+		if err := proto.Unmarshal(b, rsp); err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		if _, err := buf.Write(rsp.GetPiece()); err != nil {
+			return nil, err
+		}
+	}
+	calcChunkHash := hash.FromChunk(buf.Bytes())
+	chunkHash := hash.Hash(chunkhashMsg.GetHash())
+	if !calcChunkHash.Equals(chunkHash) {
+		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
+		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", index)
+	}
+	return buf, nil
 }
 
 func ReadPbMsg(c net.Conn) ([]byte, error) {
@@ -129,25 +147,6 @@ func readPiece(buf []byte, r io.Reader) (int, error) { // TODO: make this work t
 		}
 		b = b[:nread]
 		log.Println(len(buf)-nread, r.(*io.LimitedReader).N)
-	}
-}
-
-func (c Client) handleGetchunk(npieces uint64, ch chan GetchunkPart) {
-	defer close(ch)
-	for i := uint64(0); i < npieces; i++ {
-		b, err := ReadPbMsg(c.conn)
-		if err != nil {
-			log.Println(err)
-			ch <- GetchunkPart{nil, err}
-			return
-		}
-		rsp := &ezs.Piece{}
-		if err := proto.Unmarshal(b, rsp); err != nil {
-			log.Println(err)
-			ch <- GetchunkPart{nil, err}
-			return
-		}
-		ch <- GetchunkPart{rsp.GetPiece(), nil}
 	}
 }
 
