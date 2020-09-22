@@ -12,7 +12,7 @@ import (
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/cli"
 	"github.com/aburdulescu/go-ez/ezt"
-	"github.com/pkg/profile"
+	// "github.com/pkg/profile"
 )
 
 type Config struct {
@@ -35,7 +35,7 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 var cfg Config
 
 func main() {
-	defer profile.Start(profile.ProfilePath("."), profile.CPUProfile).Stop()
+	// defer profile.Start(profile.ProfilePath("."), profile.CPUProfile).Stop()
 	// defer profile.Start(profile.ProfilePath("."), profile.MemProfile).Stop()
 	f, err := os.Open("ez.json")
 	if err != nil {
