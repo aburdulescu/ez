@@ -67,7 +67,7 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	buf.Grow(chunks.CHUNK_SIZE)
 	for i := uint64(0); i < npieces; i++ {
-		b, err := ReadPbMsg(c.conn)
+		b, err := readPbMsg(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -90,21 +90,6 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func ReadPbMsg(c net.Conn) ([]byte, error) {
-	msgsize, err := getPbMsgSize(c)
-	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	buf.Grow(msgsize)
-	n, err := io.CopyN(buf, c, int64(msgsize))
-	if err != nil {
-		log.Println(n, err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
 func getPbMsgSize(c net.Conn) (int, error) {
 	b := make([]byte, 2)
 	_, err := io.ReadAtLeast(c, b, 2)
@@ -115,39 +100,19 @@ func getPbMsgSize(c net.Conn) (int, error) {
 	return int(msgsize), nil
 }
 
-func ReadPbMsg_without_iocopy(c net.Conn) ([]byte, error) {
+func readPbMsg(c net.Conn) ([]byte, error) {
 	msgsize, err := getPbMsgSize(c)
 	if err != nil {
 		return nil, err
 	}
 	src := io.LimitReader(c, int64(msgsize))
-	piece := make([]byte, msgsize)
-	n, err := readPiece(piece, src)
+	buf := NewMsgBuffer(msgsize)
+	n, err := buf.ReadFrom(src)
 	if err != nil {
 		log.Println(n, err)
 		return nil, err
 	}
-	return piece[:n], nil
-}
-
-func readPiece(buf []byte, r io.Reader) (int, error) { // TODO: make this work to avoid allocations made in bytes.Buffer.ReadFrom
-	nread := 0
-	b := buf
-	for {
-		n, err := r.Read(b)
-		nread += n
-		if err == io.EOF {
-			return nread, nil
-		}
-		if err != nil {
-			return nread, err
-		}
-		if nread == len(buf) {
-			return nread, nil
-		}
-		b = b[:nread]
-		log.Println(len(buf)-nread, r.(*io.LimitedReader).N)
-	}
+	return buf.Bytes(), nil
 }
 
 func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
@@ -160,7 +125,7 @@ func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
 	}
 	var readBuf []byte
 	if streaming {
-		b, err := ReadPbMsg(c.conn)
+		b, err := readPbMsg(c.conn)
 		if err != nil {
 			return nil, err
 		}
