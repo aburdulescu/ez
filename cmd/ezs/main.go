@@ -20,9 +20,9 @@ type Config struct {
 	DBPath     string `json:"dbPath"`
 }
 
-func main() { // TODO: figure out a way to profile this program while it is running
+func main() {
 	go func() {
-		log.Println(http.ListenAndServe(":23232", nil)) // TODO: test if it really works
+		log.Println(http.ListenAndServe(":23232", nil))
 	}()
 	var configPath string
 	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")

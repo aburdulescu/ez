@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/ezs"
@@ -191,14 +190,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			return err
 		}
 	}
-	chunkPool.Put(chunk)
 	return nil
-}
-
-var chunkPool = sync.Pool{ // TODO: maybe not so good an idea, seems to increase the memory of the program
-	New: func() interface{} {
-		return make([]byte, chunks.CHUNK_SIZE)
-	},
 }
 
 func readChunk(ifile ezt.IFile, i uint64) ([]byte, error) {
@@ -209,7 +201,7 @@ func readChunk(ifile ezt.IFile, i uint64) ([]byte, error) {
 	}
 	defer f.Close()
 	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
-	b := chunkPool.Get().([]byte)
+	b := make([]byte, chunks.CHUNK_SIZE)
 	n, err := r.Read(b)
 	if err != io.EOF && err != nil {
 		log.Println(n, err)
