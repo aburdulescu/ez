@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/aburdulescu/go-ez/chunks"
 	"github.com/aburdulescu/go-ez/ezs"
@@ -18,6 +19,12 @@ import (
 	badger "github.com/dgraph-io/badger/v2"
 	"google.golang.org/protobuf/proto"
 )
+
+var chunkPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, chunks.CHUNK_SIZE)
+	},
+}
 
 type Client struct {
 	id   string
@@ -139,11 +146,13 @@ func (c Client) handleGetchunk(index uint64) error {
 		log.Println(err)
 		return err
 	}
-	chunk, err := readChunk(ifile, index)
+	chunkBuf, n, err := readChunk(filepath.Join(ifile.Dir, ifile.Name), index)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	defer chunkPool.Put(chunkBuf)
+	chunk := chunkBuf[:n]
 	npieces := uint64(len(chunk) / chunks.PIECE_SIZE)
 	remainder := uint64(0)
 	if len(chunk)%chunks.PIECE_SIZE != 0 {
@@ -193,21 +202,21 @@ func (c Client) handleGetchunk(index uint64) error {
 	return nil
 }
 
-func readChunk(ifile ezt.IFile, i uint64) ([]byte, error) {
-	f, err := os.Open(filepath.Join(ifile.Dir, ifile.Name))
+func readChunk(path string, i uint64) ([]byte, int, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return nil, 0, err
 	}
 	defer f.Close()
 	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
-	b := make([]byte, chunks.CHUNK_SIZE)
+	b := chunkPool.Get().([]byte)
 	n, err := r.Read(b)
 	if err != io.EOF && err != nil {
 		log.Println(n, err)
-		return nil, err
+		return nil, 0, err
 	}
-	return b[:n], nil
+	return b, n, nil
 }
 
 func (c Client) handleGetpiece(index uint64) error {
