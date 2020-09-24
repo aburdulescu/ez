@@ -67,16 +67,17 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	buf.Grow(chunks.CHUNK_SIZE)
 	for i := uint64(0); i < npieces; i++ {
-		b, err := readPbMsg(c.conn)
+		msgBuf, err := readPbMsg(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		rsp := &ezs.Piece{}
-		if err := proto.Unmarshal(b, rsp); err != nil {
+		if err := proto.Unmarshal(msgBuf.Bytes(), rsp); err != nil {
 			log.Println(err)
 			return nil, err
 		}
+		msgBuf.Release()
 		if _, err := buf.Write(rsp.GetPiece()); err != nil {
 			return nil, err
 		}
@@ -100,19 +101,20 @@ func getPbMsgSize(c net.Conn) (int, error) {
 	return int(msgsize), nil
 }
 
-func readPbMsg(c net.Conn) ([]byte, error) {
+func readPbMsg(c net.Conn) (*MsgBuffer, error) {
 	msgsize, err := getPbMsgSize(c)
 	if err != nil {
 		return nil, err
 	}
 	src := io.LimitReader(c, int64(msgsize))
-	buf := NewMsgBuffer(msgsize)
+	buf := new(MsgBuffer)
+	buf.Alloc(msgsize)
 	n, err := buf.ReadFrom(src)
 	if err != nil {
 		log.Println(n, err)
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return buf, nil
 }
 
 func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
@@ -129,7 +131,8 @@ func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		readBuf = b
+		readBuf = b.Bytes()
+		b.Release()
 	} else {
 		b := make([]byte, 8192)
 		n, err := c.conn.Read(b)
