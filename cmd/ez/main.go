@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aburdulescu/go-ez/chunks"
-	"github.com/aburdulescu/go-ez/cli"
-	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/cli"
+	"github.com/aburdulescu/ez/ezt"
 	// "github.com/pkg/profile"
 )
 

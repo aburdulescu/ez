@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/ez/ezt"
 )
 
 type Server struct {

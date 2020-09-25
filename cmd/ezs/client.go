@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/aburdulescu/go-ez/chunks"
-	"github.com/aburdulescu/go-ez/ezs"
-	"github.com/aburdulescu/go-ez/ezt"
-	"github.com/aburdulescu/go-ez/hash"
+	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/ezs"
+	"github.com/aburdulescu/ez/ezt"
+	"github.com/aburdulescu/ez/hash"
 	badger "github.com/dgraph-io/badger/v2"
 	"google.golang.org/protobuf/proto"
 )

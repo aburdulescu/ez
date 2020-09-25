@@ -1,31 +1,24 @@
-module github.com/aburdulescu/go-ez
+module github.com/aburdulescu/ez
 
 go 1.14
 
 require (
-	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/aburdulescu/go-ez/chunks v0.0.0-00010101000000-000000000000
-	github.com/aburdulescu/go-ez/cli v0.0.0-20200915120451-e2971c4446ad
-	github.com/aburdulescu/go-ez/ezs v0.0.0-00010101000000-000000000000
-	github.com/aburdulescu/go-ez/ezt v0.0.0-20200915120451-e2971c4446ad
-	github.com/aburdulescu/go-ez/hash v0.0.0-00010101000000-000000000000
+	github.com/aburdulescu/ez/chunks v0.0.0-20200924203214-ec388fee5085
+	github.com/aburdulescu/ez/cli v0.0.0-20200924203214-ec388fee5085
+	github.com/aburdulescu/ez/ezs v0.0.0-20200924203214-ec388fee5085
+	github.com/aburdulescu/ez/ezt v0.0.0-20200924203214-ec388fee5085
+	github.com/aburdulescu/ez/hash v0.0.0-20200924203214-ec388fee5085
 	github.com/dgraph-io/badger/v2 v2.2007.2
-	github.com/dgraph-io/ristretto v0.0.3 // indirect
-	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
-	github.com/kr/pretty v0.2.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/profile v1.5.0
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
-	golang.org/x/sys v0.0.0-20200915084602-288bc346aa39 // indirect
+	golang.org/x/sys v0.0.0-20200923182605-d9f96fdee20d // indirect
 	google.golang.org/protobuf v1.25.0
 )
 
-replace github.com/aburdulescu/go-ez/cli => ./cli
+replace github.com/aburdulescu/ez/hash => ./hash
 
-replace github.com/aburdulescu/go-ez/ezt => ./ezt
+replace github.com/aburdulescu/ez/cli => ./cli
 
-replace github.com/aburdulescu/go-ez/ezs => ./ezs
+replace github.com/aburdulescu/ez/chunks => ./chunks
 
-replace github.com/aburdulescu/go-ez/chunks => ./chunks
+replace github.com/aburdulescu/ez/ezt => ./ezt
 
-replace github.com/aburdulescu/go-ez/hash => ./hash
+replace github.com/aburdulescu/ez/ezs => ./ezs

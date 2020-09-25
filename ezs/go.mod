@@ -1,4 +1,4 @@
-module github.com/aburdulescu/go-ez/ezs
+module github.com/aburdulescu/ez/ezs
 
 go 1.14
 

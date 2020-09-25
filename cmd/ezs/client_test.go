@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aburdulescu/go-ez/chunks"
+	"github.com/aburdulescu/ez/chunks"
 )
 
 func BenchmarkReadChunk(b *testing.B) {

@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/aburdulescu/go-ez/ezs"
+	"github.com/aburdulescu/ez/ezs"
 	"google.golang.org/protobuf/proto"
 )
 

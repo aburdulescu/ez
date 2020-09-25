@@ -6,7 +6,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/aburdulescu/go-ez/hash"
+	"github.com/aburdulescu/ez/hash"
 )
 
 const PIECE_SIZE = 8 << 10

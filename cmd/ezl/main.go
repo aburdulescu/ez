@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aburdulescu/go-ez/chunks"
-	"github.com/aburdulescu/go-ez/cli"
-	"github.com/aburdulescu/go-ez/ezt"
-	"github.com/aburdulescu/go-ez/hash"
+	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/cli"
+	"github.com/aburdulescu/ez/ezt"
+	"github.com/aburdulescu/ez/hash"
 
 	badger "github.com/dgraph-io/badger/v2"
 )

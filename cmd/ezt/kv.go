@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/ez/ezt"
 )
 
 type Value ezt.GetResult

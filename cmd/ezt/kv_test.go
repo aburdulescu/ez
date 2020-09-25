@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aburdulescu/go-ez/ezt"
+	"github.com/aburdulescu/ez/ezt"
 )
 
 func TestAdd(t *testing.T) {

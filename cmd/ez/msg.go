@@ -4,7 +4,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/aburdulescu/go-ez/chunks"
+	"github.com/aburdulescu/ez/chunks"
 )
 
 var msgBufPool = sync.Pool{
