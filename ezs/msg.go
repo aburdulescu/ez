@@ -33,6 +33,6 @@ func (b MsgBuffer) ReadFrom(r io.Reader) (int, error) {
 		if nread == len(b.buf) {
 			return nread, nil
 		}
-		buf = buf[nread:cap(b.buf)]
+		buf = b.buf[nread:]
 	}
 }
