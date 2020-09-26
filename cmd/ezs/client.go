@@ -71,7 +71,7 @@ func (c Client) run() {
 	}
 }
 
-func (c Client) send(rsp *ezs.Response) error {
+func (c Client) send(rsp *ezs.Response) error { // TODO: treat all sends as when streaming
 	b, err := proto.Marshal(rsp)
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (c Client) send(rsp *ezs.Response) error {
 	return nil
 }
 
-func (c Client) recv(b []byte) (*ezs.Request, error) {
+func (c Client) recv(b []byte) (*ezs.Request, error) { // TODO: treat all recvs as when streaming
 	n, err := c.conn.Read(b)
 	if err != nil {
 		return nil, err
