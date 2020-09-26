@@ -75,6 +75,7 @@ clean() {
     do
         docker image rm -f ez_seeder_$i
     done
+    rm -rf $files_dir
 }
 
 start() {

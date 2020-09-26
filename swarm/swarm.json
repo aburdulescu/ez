@@ -12,16 +12,16 @@
             "size": 1
         },
         {
-            "name": "f10MB",
-            "size": 10
-        },
-        {
             "name": "f100MB",
             "size": 100
         },
         {
             "name": "f1GB",
             "size": 1024
+        },
+        {
+            "name": "f10GB",
+            "size": 10240
         }
     ]
 }
