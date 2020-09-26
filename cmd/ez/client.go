@@ -5,12 +5,27 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezs"
 	"github.com/aburdulescu/ez/hash"
 	"google.golang.org/protobuf/proto"
 )
+
+var chunkPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 0, chunks.CHUNK_SIZE)
+	},
+}
+
+func AllocChunk() []byte {
+	return chunkPool.Get().([]byte)
+}
+
+func ReleaseChunk(b []byte) {
+	chunkPool.Put(b)
+}
 
 type Client struct {
 	conn net.Conn
@@ -71,8 +86,7 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	}
 	chunkhashMsg := rsp.GetChunkhash()
 	npieces := chunkhashMsg.GetNpieces()
-	buf := new(bytes.Buffer)
-	buf.Grow(chunks.CHUNK_SIZE)
+	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
 		msgBuf, err := ezs.Read(c.conn)
 		if err != nil {

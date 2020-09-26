@@ -98,6 +98,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 			log.Println(err)
 			return err
 		}
+		ReleaseChunk(chunk.buf.Bytes())
 	}
 	return nil
 }
