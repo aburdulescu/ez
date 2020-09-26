@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -35,9 +32,8 @@ type Client struct {
 func (c Client) run() {
 	defer c.conn.Close()
 	remAddr := c.conn.RemoteAddr().String()
-	b := make([]byte, 8192)
 	for {
-		req, err := c.recv(b)
+		req, err := c.Recv()
 		if err == io.EOF {
 			return
 		}
@@ -71,24 +67,28 @@ func (c Client) run() {
 	}
 }
 
-func (c Client) send(rsp *ezs.Response) error { // TODO: treat all sends as when streaming
+func (c Client) Send(rsp *ezs.Response) error {
 	b, err := proto.Marshal(rsp)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-	if _, err := c.conn.Write(b); err != nil {
+	if err := ezs.Write(c.conn, b); err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func (c Client) recv(b []byte) (*ezs.Request, error) { // TODO: treat all recvs as when streaming
-	n, err := c.conn.Read(b)
+func (c Client) Recv() (*ezs.Request, error) {
+	buf, err := ezs.Read(c.conn)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	req := &ezs.Request{}
-	if err := proto.Unmarshal(b[:n], req); err != nil {
+	if err := proto.Unmarshal(buf.Bytes(), req); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return req, nil
@@ -99,7 +99,8 @@ func (c Client) handleConnect() error {
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
-	if err := c.send(rsp); err != nil {
+	if err := c.Send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -110,26 +111,8 @@ func (c Client) handleDisconnect() error {
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
-	if err := c.send(rsp); err != nil {
-		return err
-	}
-	return nil
-}
-
-func WritePbMsg(c net.Conn, msg []byte) error {
-	const msgMaxSize = (1 << 16) - 1
-	if len(msg) > msgMaxSize {
-		return fmt.Errorf("msg len too big")
-	}
-	b := make([]byte, 2+len(msg))
-	binary.LittleEndian.PutUint16(b, uint16(len(msg)))
-	for i := 0; i < len(msg); i++ {
-		b[i+2] = msg[i]
-	}
-	buf := bytes.NewBuffer(b)
-	n, err := io.Copy(c, buf)
-	if err != nil {
-		log.Println(buf.Len(), n, err)
+	if err := c.Send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -168,11 +151,8 @@ func (c Client) handleGetchunk(index uint64) error {
 			},
 		},
 	}
-	b, err := proto.Marshal(rsp)
-	if err != nil {
-		return err
-	}
-	if err := WritePbMsg(c.conn, b); err != nil {
+	if err := c.Send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	for i := uint64(0); i < npieces-remainder; i++ {
@@ -180,9 +160,10 @@ func (c Client) handleGetchunk(index uint64) error {
 		rsp := &ezs.Piece{Piece: piece}
 		b, err := proto.Marshal(rsp)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
-		if err := WritePbMsg(c.conn, b); err != nil {
+		if err := ezs.Write(c.conn, b); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -192,9 +173,10 @@ func (c Client) handleGetchunk(index uint64) error {
 		rsp := &ezs.Piece{Piece: piece}
 		b, err := proto.Marshal(rsp)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
-		if err := WritePbMsg(c.conn, b); err != nil {
+		if err := ezs.Write(c.conn, b); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -224,7 +206,8 @@ func (c Client) handleGetpiece(index uint64) error {
 		Type:    ezs.ResponseType_PIECE,
 		Payload: &ezs.Response_Piece{[]byte("piece")},
 	}
-	if err := c.send(rsp); err != nil {
+	if err := c.Send(rsp); err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -235,13 +218,16 @@ func (c Client) getIFile() (ezt.IFile, error) {
 	err := c.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(string(c.id) + ".ifile"))
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		v, err := item.ValueCopy(nil)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		if err := json.Unmarshal(v, &i); err != nil {
+			log.Println(err)
 			return err
 		}
 		return nil
@@ -254,13 +240,16 @@ func (c Client) getChunkHashes() ([]hash.Hash, error) {
 	err := c.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(string(c.id) + ".chunks"))
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		v, err := item.ValueCopy(nil)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		if err := json.Unmarshal(v, &hashes); err != nil {
+			log.Println(err)
 			return err
 		}
 		return nil

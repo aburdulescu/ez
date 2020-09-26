@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"net"
 
@@ -37,7 +35,11 @@ func (c Client) Connect(id string) error {
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
 	}
-	rsp, err := c.send(req, false)
+	if err := c.Send(req); err != nil {
+		log.Println(err)
+		return err
+	}
+	rsp, err := c.Recv()
 	if err != nil {
 		log.Println(err)
 		return err
@@ -54,7 +56,11 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
 	}
-	rsp, err := c.send(req, true)
+	if err := c.Send(req); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	rsp, err := c.Recv()
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -68,7 +74,7 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	buf.Grow(chunks.CHUNK_SIZE)
 	for i := uint64(0); i < npieces; i++ {
-		msgBuf, err := readPbMsg(c.conn)
+		msgBuf, err := ezs.Read(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -91,62 +97,27 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func getPbMsgSize(c net.Conn) (int, error) {
-	b := make([]byte, 2)
-	_, err := io.ReadAtLeast(c, b, 2)
+func (c Client) Send(req *ezs.Request) error {
+	b, err := proto.Marshal(req)
 	if err != nil {
 		log.Println(err)
-		return -1, err
+		return err
 	}
-	msgsize := binary.LittleEndian.Uint16(b)
-	return int(msgsize), nil
+	if err := ezs.Write(c.conn, b); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
-func readPbMsg(c net.Conn) (*MsgBuffer, error) {
-	msgsize, err := getPbMsgSize(c)
+func (c Client) Recv() (*ezs.Response, error) {
+	buf, err := ezs.Read(c.conn)
 	if err != nil {
 		log.Println(err)
 		return nil, err
-	}
-	src := io.LimitReader(c, int64(msgsize))
-	buf := NewMsgBuffer(msgsize)
-	n, err := buf.ReadFrom(src)
-	if err != nil {
-		log.Println(n, err)
-		return nil, err
-	}
-	return buf, nil
-}
-
-func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) { // TODO: treat all as if streaming
-	writeBuf, err := proto.Marshal(req)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	if _, err := c.conn.Write(writeBuf); err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	var readBuf []byte
-	if streaming {
-		b, err := readPbMsg(c.conn)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		readBuf = b.Bytes()
-	} else {
-		b := make([]byte, 8192)
-		n, err := c.conn.Read(b)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		readBuf = b[:n]
 	}
 	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(readBuf, rsp); err != nil {
+	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
 		log.Println(err)
 		return nil, err
 	}

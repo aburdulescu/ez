@@ -14,8 +14,9 @@ import (
 const MAX_CHUNKS uint64 = 8
 
 type Downloader struct {
-	f       *os.File
-	clients []Client
+	id    string
+	peers []string
+	f     *os.File
 }
 
 type Chunk struct {
@@ -25,6 +26,8 @@ type Chunk struct {
 }
 
 func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
+	d.id = id
+	d.peers = peers
 	f, err := os.Create(ifile.Name)
 	if err != nil {
 		log.Println(err)
@@ -32,20 +35,6 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	}
 	defer f.Close()
 	d.f = f
-	d.clients = make([]Client, len(peers))
-	for i := range peers {
-		var client Client
-		if err := client.Dial(peers[i]); err != nil {
-			log.Println(err)
-			return err
-		}
-		defer client.Close()
-		if err := client.Connect(id); err != nil {
-			log.Println(err)
-			return err
-		}
-		d.clients[i] = client
-	}
 	nchunks := uint64(ifile.Size / chunks.CHUNK_SIZE)
 	if ifile.Size%chunks.CHUNK_SIZE != 0 {
 		nchunks++
@@ -81,18 +70,24 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 }
 
 func (d Downloader) dwChunks(start, end uint64) error {
-	clientCount := 0
+	peerCount := 0
 	result := make(chan Chunk)
 	for index := start; index < end; index++ {
-		peerIndex := clientCount % len(d.clients)
-		go fetch(d.clients[peerIndex], index, result)
-		clientCount++
+		peerIndex := peerCount % len(d.peers)
+		go fetch(d.id, d.peers[peerIndex], index, result)
+		peerCount++
 	}
 	chunks := make([]Chunk, end-start)
-	for j := uint64(0); j < (end - start); j++ {
-		chunk := <-result
-		chunks[chunk.index] = chunk
-		log.Println("recv:", chunk.index)
+	if start == 0 {
+		for i := uint64(0); i < (end - start); i++ {
+			chunk := <-result
+			chunks[chunk.index] = chunk
+		}
+	} else {
+		for i := uint64(0); i < (end - start); i++ {
+			chunk := <-result
+			chunks[chunk.index%start] = chunk
+		}
 	}
 	for _, chunk := range chunks {
 		if chunk.err != nil {
@@ -107,9 +102,18 @@ func (d Downloader) dwChunks(start, end uint64) error {
 	return nil
 }
 
-func fetch(c Client, index uint64, result chan Chunk) {
-	log.Println("fetch:", index)
-	buf, err := c.Getchunk(index)
+func fetch(id string, addr string, index uint64, result chan Chunk) {
+	var client Client
+	if err := client.Dial(addr); err != nil {
+		log.Println(err)
+		return
+	}
+	defer client.Close()
+	if err := client.Connect(id); err != nil {
+		log.Println(err)
+		return
+	}
+	buf, err := client.Getchunk(index)
 	if err != nil {
 		result <- Chunk{err, index, nil}
 		return
