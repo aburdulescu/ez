@@ -2,35 +2,14 @@ package main
 
 import (
 	"io"
-	"sync"
-
-	"github.com/aburdulescu/ez/chunks"
 )
-
-var msgBufPool = sync.Pool{
-	New: func() interface{} {
-		return make([]byte, chunks.PIECE_SIZE+3)
-	},
-}
 
 type MsgBuffer struct {
 	buf []byte
 }
 
-func (b *MsgBuffer) Alloc(size int) {
-	if size == (chunks.PIECE_SIZE + 3) {
-		b.buf = msgBufPool.Get().([]byte)
-	} else {
-		b.buf = make([]byte, size)
-	}
-}
-
-func (b *MsgBuffer) Release() {
-	if len(b.buf) == (chunks.PIECE_SIZE + 3) {
-		msgBufPool.Put(b.buf)
-	} else {
-		b.buf = nil
-	}
+func NewMsgBuffer(size int) *MsgBuffer {
+	return &MsgBuffer{make([]byte, size)}
 }
 
 func (b MsgBuffer) Bytes() []byte {

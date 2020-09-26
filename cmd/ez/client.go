@@ -77,7 +77,6 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 			log.Println(err)
 			return nil, err
 		}
-		msgBuf.Release()
 		if _, err := buf.Write(rsp.GetPiece()); err != nil {
 			return nil, err
 		}
@@ -107,8 +106,7 @@ func readPbMsg(c net.Conn) (*MsgBuffer, error) {
 		return nil, err
 	}
 	src := io.LimitReader(c, int64(msgsize))
-	buf := new(MsgBuffer)
-	buf.Alloc(msgsize)
+	buf := NewMsgBuffer(msgsize)
 	n, err := buf.ReadFrom(src)
 	if err != nil {
 		log.Println(n, err)
@@ -132,7 +130,6 @@ func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
 			return nil, err
 		}
 		readBuf = b.Bytes()
-		b.Release()
 	} else {
 		b := make([]byte, 8192)
 		n, err := c.conn.Read(b)
