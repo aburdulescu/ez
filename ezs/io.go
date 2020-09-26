@@ -9,12 +9,12 @@ import (
 )
 
 type ClientIf interface {
-	Send(req *Request) error
+	Send(req Request) error
 	Recv() (*Response, error)
 }
 
 type ServerIf interface {
-	Send(rsp *Response) error
+	Send(rsp Response) error
 	Recv() (*Request, error)
 }
 

@@ -14,6 +14,7 @@ require (
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/profile v1.5.0
 	golang.org/x/net v0.0.0-20200925080053-05aa5d4ee321 // indirect
 	google.golang.org/protobuf v1.25.0
 )

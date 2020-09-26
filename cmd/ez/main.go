@@ -88,8 +88,8 @@ func onGet(args ...string) error {
 		return err
 	}
 	defer rsp.Body.Close()
-	r := &ezt.GetResult{}
-	if err := json.NewDecoder(rsp.Body).Decode(r); err != nil {
+	r := ezt.GetResult{}
+	if err := json.NewDecoder(rsp.Body).Decode(&r); err != nil {
 		log.Println(err)
 		return err
 	}

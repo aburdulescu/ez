@@ -67,8 +67,8 @@ func (c Client) run() {
 	}
 }
 
-func (c Client) Send(rsp *ezs.Response) error {
-	b, err := proto.Marshal(rsp)
+func (c Client) Send(rsp ezs.Response) error {
+	b, err := proto.Marshal(&rsp)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -95,7 +95,7 @@ func (c Client) Recv() (*ezs.Request, error) {
 }
 
 func (c Client) handleConnect() error {
-	rsp := &ezs.Response{
+	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
@@ -107,7 +107,7 @@ func (c Client) handleConnect() error {
 }
 
 func (c Client) handleDisconnect() error {
-	rsp := &ezs.Response{
+	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
@@ -142,7 +142,7 @@ func (c Client) handleGetchunk(index uint64) error {
 		npieces++
 		remainder = 1
 	}
-	rsp := &ezs.Response{
+	rsp := ezs.Response{
 		Type: ezs.ResponseType_CHUNKHASH,
 		Payload: &ezs.Response_Chunkhash{
 			&ezs.Chunkhash{
@@ -157,8 +157,8 @@ func (c Client) handleGetchunk(index uint64) error {
 	}
 	for i := uint64(0); i < npieces-remainder; i++ {
 		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
-		rsp := &ezs.Piece{Piece: piece}
-		b, err := proto.Marshal(rsp)
+		rsp := ezs.Piece{Piece: piece}
+		b, err := proto.Marshal(&rsp)
 		if err != nil {
 			log.Println(err)
 			return err
@@ -202,7 +202,7 @@ func readChunk(path string, i uint64) ([]byte, int, error) {
 }
 
 func (c Client) handleGetpiece(index uint64) error {
-	rsp := &ezs.Response{
+	rsp := ezs.Response{
 		Type:    ezs.ResponseType_PIECE,
 		Payload: &ezs.Response_Piece{[]byte("piece")},
 	}

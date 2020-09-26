@@ -31,7 +31,7 @@ func (c Client) Close() {
 }
 
 func (c Client) Connect(id string) error {
-	req := &ezs.Request{
+	req := ezs.Request{
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
 	}
@@ -52,7 +52,7 @@ func (c Client) Connect(id string) error {
 }
 
 func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
-	req := &ezs.Request{
+	req := ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
 	}
@@ -79,8 +79,8 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 			log.Println(err)
 			return nil, err
 		}
-		rsp := &ezs.Piece{}
-		if err := proto.Unmarshal(msgBuf.Bytes(), rsp); err != nil {
+		rsp := ezs.Piece{}
+		if err := proto.Unmarshal(msgBuf.Bytes(), &rsp); err != nil {
 			log.Println(err)
 			return nil, err
 		}
@@ -97,8 +97,8 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func (c Client) Send(req *ezs.Request) error {
-	b, err := proto.Marshal(req)
+func (c Client) Send(req ezs.Request) error {
+	b, err := proto.Marshal(&req)
 	if err != nil {
 		log.Println(err)
 		return err
