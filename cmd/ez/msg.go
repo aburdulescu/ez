@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"log"
 )
 
 type MsgBuffer struct {
@@ -26,6 +27,7 @@ func (b MsgBuffer) ReadFrom(r io.Reader) (int, error) {
 			return nread, nil
 		}
 		if err != nil {
+			log.Println(err)
 			return nread, err
 		}
 		if nread == len(b.buf) {

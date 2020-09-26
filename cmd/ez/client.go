@@ -21,6 +21,7 @@ type Client struct {
 func (c *Client) Dial(addr string) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	c.conn = conn
@@ -94,6 +95,7 @@ func getPbMsgSize(c net.Conn) (int, error) {
 	b := make([]byte, 2)
 	_, err := io.ReadAtLeast(c, b, 2)
 	if err != nil {
+		log.Println(err)
 		return -1, err
 	}
 	msgsize := binary.LittleEndian.Uint16(b)
@@ -103,6 +105,7 @@ func getPbMsgSize(c net.Conn) (int, error) {
 func readPbMsg(c net.Conn) (*MsgBuffer, error) {
 	msgsize, err := getPbMsgSize(c)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	src := io.LimitReader(c, int64(msgsize))
@@ -115,18 +118,21 @@ func readPbMsg(c net.Conn) (*MsgBuffer, error) {
 	return buf, nil
 }
 
-func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
+func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) { // TODO: treat all as if streaming
 	writeBuf, err := proto.Marshal(req)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	if _, err := c.conn.Write(writeBuf); err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	var readBuf []byte
 	if streaming {
 		b, err := readPbMsg(c.conn)
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 		readBuf = b.Bytes()
@@ -134,6 +140,7 @@ func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
 		b := make([]byte, 8192)
 		n, err := c.conn.Read(b)
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 		readBuf = b[:n]
