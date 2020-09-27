@@ -29,20 +29,20 @@ func msgSize(r io.Reader) (int, error) {
 	return int(size), nil
 }
 
-func Read(r io.Reader) (*MsgBuffer, error) {
+func Read(r io.Reader) ([]byte, error) {
 	msgsize, err := msgSize(r)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 	src := io.LimitReader(r, int64(msgsize))
-	buf := NewMsgBuffer(msgsize)
+	buf := AllocMsg(msgsize)
 	n, err := buf.ReadFrom(src)
 	if err != nil {
 		log.Println(n, err)
 		return nil, err
 	}
-	return buf, nil
+	return buf.Bytes(), nil
 }
 
 func Write(w io.Writer, msg []byte) error {
