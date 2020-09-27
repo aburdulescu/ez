@@ -81,16 +81,17 @@ func (c Client) Send(rsp ezs.Response) error {
 }
 
 func (c Client) Recv() (*ezs.Request, error) {
-	buf, err := ezs.Read(c.conn)
+	b, err := ezs.Read(c.conn)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 	req := &ezs.Request{}
-	if err := proto.Unmarshal(buf.Bytes(), req); err != nil {
+	if err := proto.Unmarshal(b, req); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	ezs.ReleaseMsg(b)
 	return req, nil
 }
 
