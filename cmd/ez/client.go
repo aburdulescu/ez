@@ -24,7 +24,7 @@ func AllocChunk() []byte {
 }
 
 func ReleaseChunk(b []byte) {
-	chunkPool.Put(b)
+	chunkPool.Put(b[:0])
 }
 
 type Client struct {
@@ -88,19 +88,20 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	npieces := chunkhashMsg.GetNpieces()
 	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
-		msgBuf, err := ezs.Read(c.conn)
+		b, err := ezs.Read(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		rsp := ezs.Piece{}
-		if err := proto.Unmarshal(msgBuf.Bytes(), &rsp); err != nil {
+		if err := proto.Unmarshal(b, &rsp); err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		if _, err := buf.Write(rsp.GetPiece()); err != nil {
 			return nil, err
 		}
+		ezs.ReleaseMsg(b)
 	}
 	calcChunkHash := hash.FromChunk(buf.Bytes())
 	chunkHash := hash.Hash(chunkhashMsg.GetHash())
@@ -125,15 +126,16 @@ func (c Client) Send(req ezs.Request) error {
 }
 
 func (c Client) Recv() (*ezs.Response, error) {
-	buf, err := ezs.Read(c.conn)
+	b, err := ezs.Read(c.conn)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(buf.Bytes(), rsp); err != nil {
+	if err := proto.Unmarshal(b, rsp); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	ezs.ReleaseMsg(b)
 	return rsp, nil
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 clean() {
-    rm -f cpu.pprof mem.pprof f1GB
+    rm -f cpu.pprof mem.pprof f*B
 }
 
 case $1 in
