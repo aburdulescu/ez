@@ -2,17 +2,30 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"net"
+	"sync"
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezs"
 	"github.com/aburdulescu/ez/hash"
 	"google.golang.org/protobuf/proto"
 )
+
+var chunkPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 0, chunks.CHUNK_SIZE)
+	},
+}
+
+func AllocChunk() []byte {
+	return chunkPool.Get().([]byte)
+}
+
+func ReleaseChunk(b []byte) {
+	chunkPool.Put(b[:0])
+}
 
 type Client struct {
 	conn net.Conn
@@ -21,6 +34,7 @@ type Client struct {
 func (c *Client) Dial(addr string) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	c.conn = conn
@@ -32,11 +46,15 @@ func (c Client) Close() {
 }
 
 func (c Client) Connect(id string) error {
-	req := &ezs.Request{
+	req := ezs.Request{
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
 	}
-	rsp, err := c.send(req, false)
+	if err := c.Send(req); err != nil {
+		log.Println(err)
+		return err
+	}
+	rsp, err := c.Recv()
 	if err != nil {
 		log.Println(err)
 		return err
@@ -49,11 +67,15 @@ func (c Client) Connect(id string) error {
 }
 
 func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
-	req := &ezs.Request{
+	req := ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
 	}
-	rsp, err := c.send(req, true)
+	if err := c.Send(req); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	rsp, err := c.Recv()
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -64,22 +86,22 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	}
 	chunkhashMsg := rsp.GetChunkhash()
 	npieces := chunkhashMsg.GetNpieces()
-	buf := new(bytes.Buffer)
-	buf.Grow(chunks.CHUNK_SIZE)
+	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
-		msgBuf, err := readPbMsg(c.conn)
+		b, err := ezs.Read(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
-		rsp := &ezs.Piece{}
-		if err := proto.Unmarshal(msgBuf.Bytes(), rsp); err != nil {
+		rsp := ezs.Piece{}
+		if err := proto.Unmarshal(b, &rsp); err != nil {
 			log.Println(err)
 			return nil, err
 		}
 		if _, err := buf.Write(rsp.GetPiece()); err != nil {
 			return nil, err
 		}
+		ezs.ReleaseMsg(b)
 	}
 	calcChunkHash := hash.FromChunk(buf.Bytes())
 	chunkHash := hash.Hash(chunkhashMsg.GetHash())
@@ -90,58 +112,30 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func getPbMsgSize(c net.Conn) (int, error) {
-	b := make([]byte, 2)
-	_, err := io.ReadAtLeast(c, b, 2)
+func (c Client) Send(req ezs.Request) error {
+	b, err := proto.Marshal(&req)
 	if err != nil {
-		return -1, err
+		log.Println(err)
+		return err
 	}
-	msgsize := binary.LittleEndian.Uint16(b)
-	return int(msgsize), nil
+	if err := ezs.Write(c.conn, b); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
-func readPbMsg(c net.Conn) (*MsgBuffer, error) {
-	msgsize, err := getPbMsgSize(c)
+func (c Client) Recv() (*ezs.Response, error) {
+	b, err := ezs.Read(c.conn)
 	if err != nil {
-		return nil, err
-	}
-	src := io.LimitReader(c, int64(msgsize))
-	buf := NewMsgBuffer(msgsize)
-	n, err := buf.ReadFrom(src)
-	if err != nil {
-		log.Println(n, err)
-		return nil, err
-	}
-	return buf, nil
-}
-
-func (c Client) send(req *ezs.Request, streaming bool) (*ezs.Response, error) {
-	writeBuf, err := proto.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := c.conn.Write(writeBuf); err != nil {
-		return nil, err
-	}
-	var readBuf []byte
-	if streaming {
-		b, err := readPbMsg(c.conn)
-		if err != nil {
-			return nil, err
-		}
-		readBuf = b.Bytes()
-	} else {
-		b := make([]byte, 8192)
-		n, err := c.conn.Read(b)
-		if err != nil {
-			return nil, err
-		}
-		readBuf = b[:n]
-	}
-	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(readBuf, rsp); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	rsp := &ezs.Response{}
+	if err := proto.Unmarshal(b, rsp); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	ezs.ReleaseMsg(b)
 	return rsp, nil
 }
