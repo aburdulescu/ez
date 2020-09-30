@@ -33,7 +33,7 @@ var cfg Config
 
 func main() {
 	// defer profile.Start(profile.ProfilePath("."), profile.CPUProfile).Stop()
-	// defer profile.Start(profile.ProfilePath("."), profile.MemProfile).Stop()
+	// defer profile.Start(profile.ProfilePath("."), profile.MemProfile, profile.MemProfileRate(1)).Stop()
 	f, err := os.Open("ez.json")
 	if err != nil {
 		handleErr(err)
