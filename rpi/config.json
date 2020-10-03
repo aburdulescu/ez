@@ -1,0 +1,14 @@
+{
+    "home": "/home/pi/ez",
+    "files": [
+        {
+            "name": "f100MB",
+            "size": 100
+        }
+    ],
+    "seeders": [
+        "pi03",
+        "dnsmasq"
+    ],
+    "tracker": "pi03"
+}

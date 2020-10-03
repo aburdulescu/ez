@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -24,10 +23,7 @@ func main() {
 	go func() {
 		log.Println(http.ListenAndServe(":23232", nil))
 	}()
-	var configPath string
-	flag.StringVar(&configPath, "config", "config.json", "path to the configuration file")
-	flag.Parse()
-	f, err := os.Open(configPath)
+	f, err := os.Open("ezs.json")
 	if err != nil {
 		handleErr(err)
 	}
