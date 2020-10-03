@@ -5,6 +5,6 @@ go 1.14
 replace github.com/aburdulescu/ez/hash => ../hash
 
 require (
-	github.com/aburdulescu/ez/hash v0.0.0-20200926090550-8d45d15b70d6
-	golang.org/x/sys v0.0.0-20200926100807-9d91bd62050c // indirect
+	github.com/aburdulescu/ez/hash v0.0.0-20200927092412-8d7e1d6cc4ec
+	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
 )
