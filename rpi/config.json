@@ -1,14 +1,22 @@
 {
-    "home": "/home/pi/ez",
+    "homePath": "/home/pi/ez",
+    "trackerAddr": "pi03",
+    "seeders": [
+        {
+            "addr": "pi03",
+            "isTracker": true,
+            "isClient": false
+        },
+        {
+            "addr": "dnsmasq",
+            "isTracker": false,
+            "isClient": true
+        }
+    ],
     "files": [
         {
             "name": "f100MB",
             "size": 100
         }
-    ],
-    "seeders": [
-        "pi03",
-        "dnsmasq"
-    ],
-    "tracker": "pi03"
+    ]
 }
