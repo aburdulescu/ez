@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -14,29 +14,19 @@ import (
 	badger "github.com/dgraph-io/badger/v2"
 )
 
-type Config struct {
-	ListenAddr string `json:"listenAddr"`
-	DBPath     string `json:"dbPath"`
-}
-
 func main() {
+	var dbPath string
+	flag.StringVar(&dbPath, "dbpath", "./db", "path where the database is stored")
+	flag.Parse()
 	go func() {
 		log.Println(http.ListenAndServe(":23232", nil))
 	}()
-	f, err := os.Open("ezs.json")
-	if err != nil {
-		handleErr(err)
-	}
-	var cfg Config
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		handleErr(err)
-	}
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
-	ln, err := net.Listen("tcp", cfg.ListenAddr)
+	ln, err := net.Listen("tcp", ":23231")
 	if err != nil {
 		handleErr(err)
 	}
-	opts := badger.DefaultOptions(cfg.DBPath).WithLogger(nil).WithReadOnly(true).WithBypassLockGuard(true)
+	opts := badger.DefaultOptions(dbPath).WithLogger(nil).WithReadOnly(true).WithBypassLockGuard(true)
 	db, err := badger.Open(opts)
 	if err != nil {
 		handleErr(err)
