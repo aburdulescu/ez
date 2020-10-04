@@ -15,6 +15,9 @@
 # generate the files there? no, because then the seeders will have different files
 # then generate them in one place and copy(maybe using ez!) them where needed and if needed
 
+# Don't use config file for ezs, use flags
+# Generate service files for ezt and ezs
+
 set -e
 
 [[ $# -lt 1 ]] && (echo "missing command argument"; exit 1)
@@ -29,6 +32,12 @@ build() {
     ezDataFmt='{"trackerAddr":"%s"}'
     ezlDataFmt='{"trackerAddr":"%s","seederAddr":"%s","dbPath":"./db"}'
     ezsDataFmt='{"dbPath":"./db"}'
+    serviceDataFmt='{"description":"%s","execStart":"%s"}'
+
+    pushd ../
+    make clean
+    GOOS=linux GOARCH=arm make
+    popd
 
     for i in $(seq 0 $(($seedersLength-1)))
     do
@@ -41,9 +50,23 @@ build() {
         rm -rf $seederDir
         mkdir -p $seederDir
 
-        printf $ezDataFmt $trackerAddr | tpl -t templates/ez.json.tpl > $seederDir/ez.json
+        cp ../cmd/ezl/ezl $seederDir/ezl
         printf $ezlDataFmt $trackerAddr $addr | tpl -t templates/ezl.json.tpl > $seederDir/ezl.json
+
+        cp ../cmd/ezs/ezs $seederDir/ezs
         printf $ezsDataFmt | tpl -t templates/ezs.json.tpl > $seederDir/ezs.json
+        printf $serviceDataFmt "ez seeder server" "$homePath/ezt -dbpath $homePath/db" | tpl -t templates/service.tpl > $seederDir/ezs.service
+
+        if [[ $isTracker == "true" ]]
+        then
+            cp ../cmd/ezt/ezt $seederDir/ezt
+            printf $serviceDataFmt "ez tracker server" | tpl -t templates/service.tpl > $seederDir/ezt.service
+        fi
+        if [[ $isClient == "true" ]]
+        then
+            cp ../cmd/ez/ez $seederDir/ez
+            printf $ezDataFmt $trackerAddr | tpl -t templates/ez.json.tpl > $seederDir/ez.json
+        fi
     done
 }
 
@@ -56,12 +79,21 @@ clean() {
     done
 }
 
+deploy() {
+    # copy seeder dir to target
+    # start services
+    echo "here be dragons"
+}
+
 case $1 in
     "build")
         build
         ;;
     "clean")
         clean
+        ;;
+    "deploy")
+        deploy
         ;;
     *)
         echo "unknown command '$1'"
