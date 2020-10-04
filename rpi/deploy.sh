@@ -80,9 +80,20 @@ clean() {
 }
 
 deploy() {
-    # copy seeder dir to target
-    # start services
-    echo "here be dragons"
+    if [[ -z $RPI_PASSWORD ]]
+    then
+        echo "define the RPI_PASSWORD variable"
+        exit 1
+    fi
+    for i in $(seq 0 $(($seedersLength-1)))
+    do
+        addr=$(echo $seeders | jq -r ".[$i].addr")
+        seederDir="seeder_"$addr
+        echo "deploy $seederDir"
+        sshpass -p $RPI_PASSWORD ssh pi@$addr mkdir -p $homePath
+        sshpass -p $RPI_PASSWORD scp $seederDir/* pi@$addr:$homePath/
+        # start services
+    done
 }
 
 case $1 in
