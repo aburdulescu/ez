@@ -55,12 +55,12 @@ build() {
 
         cp ../cmd/ezs/ezs $seederDir/ezs
         printf $ezsDataFmt | tpl -t templates/ezs.json.tpl > $seederDir/ezs.json
-        printf $serviceDataFmt "ez seeder server" "$homePath/ezt -dbpath $homePath/db" | tpl -t templates/service.tpl > $seederDir/ezs.service
+        printf $serviceDataFmt "ez seeder server" "$homePath/ezs -dbpath $homePath/db" | tpl -t templates/service.tpl > $seederDir/ezs.service
 
         if [[ $isTracker == "true" ]]
         then
             cp ../cmd/ezt/ezt $seederDir/ezt
-            printf $serviceDataFmt "ez tracker server" | tpl -t templates/service.tpl > $seederDir/ezt.service
+            printf $serviceDataFmt "ez tracker server" $homePath/ezt | tpl -t templates/service.tpl > $seederDir/ezt.service
         fi
         if [[ $isClient == "true" ]]
         then
@@ -90,9 +90,9 @@ deploy() {
         addr=$(echo $seeders | jq -r ".[$i].addr")
         seederDir="seeder_"$addr
         echo "deploy $seederDir"
+        sshpass -p $RPI_PASSWORD ssh pi@$addr rm -rf $homePath
         sshpass -p $RPI_PASSWORD ssh pi@$addr mkdir -p $homePath
         sshpass -p $RPI_PASSWORD scp $seederDir/* pi@$addr:$homePath/
-        # start services
     done
 }
 

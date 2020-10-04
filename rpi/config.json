@@ -1,14 +1,14 @@
 {
     "homePath": "/home/pi/ez",
-    "trackerAddr": "pi03",
+    "trackerAddr": "192.168.0.203",
     "seeders": [
         {
-            "addr": "pi03",
+            "addr": "192.168.0.203",
             "isTracker": true,
             "isClient": false
         },
         {
-            "addr": "dnsmasq",
+            "addr": "192.168.0.200",
             "isTracker": false,
             "isClient": true
         }
