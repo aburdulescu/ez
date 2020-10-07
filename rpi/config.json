@@ -1,0 +1,27 @@
+{
+    "homePath": "/home/pi/ez",
+    "trackerAddr": "192.168.0.203",
+    "seeders": [
+        {
+            "addr": "192.168.0.203",
+            "isTracker": true,
+            "isClient": false
+        },
+        {
+            "addr": "192.168.0.200",
+            "isTracker": false,
+            "isClient": true
+        },
+        {
+            "addr": "192.168.0.201",
+            "isTracker": false,
+            "isClient": true
+        }
+    ],
+    "files": [
+        {
+            "name": "f100MB",
+            "size": 100
+        }
+    ]
+}
