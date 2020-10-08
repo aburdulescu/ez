@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -11,10 +9,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
-
-	"github.com/aburdulescu/ez/ezt"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
@@ -54,9 +49,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := updateTracker(db); err != nil {
+	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:23234", db)
+	if err != nil {
 		return err
 	}
+	go trackerProbeServer.ListenAndServe()
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go handleCtrlC(c, db)
@@ -72,53 +69,6 @@ func run() error {
 		}
 		go c.run()
 	}
-}
-
-func updateTracker(db *badger.DB) error {
-	var files []ezt.File
-	err := db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					id := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Hash: id, IFile: i})
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	params := ezt.PostParams{
-		Files: files,
-		Addr:  seedAddr,
-	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(params); err != nil {
-		return err
-	}
-	rsp, err := http.Post(cfg.TrackerURL, "application/json", buf)
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
-	return nil
 }
 
 func handleCtrlC(c chan os.Signal, db *badger.DB) {
