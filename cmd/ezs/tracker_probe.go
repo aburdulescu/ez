@@ -28,7 +28,7 @@ func NewTrackerProbeServer(addr string, db *badger.DB) (TrackerProbeServer, erro
 	if err != nil {
 		return TrackerProbeServer{}, err
 	}
-	c, err := net.ListenMulticastUDP("udp4", nil, a)
+	c, err := net.ListenMulticastUDP("udp4", nil, a) // TODO: don't use nil for interface
 	if err != nil {
 		return TrackerProbeServer{}, err
 	}
