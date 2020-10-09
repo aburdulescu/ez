@@ -44,7 +44,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	opts := badger.DefaultOptions(dbPath).WithLogger(nil).WithReadOnly(true).WithBypassLockGuard(true)
+	opts := badger.DefaultOptions(dbPath).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
 		return err
