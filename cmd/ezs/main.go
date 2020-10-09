@@ -37,10 +37,10 @@ func run() error {
 		return fmt.Errorf("trackeraddr is empty")
 	}
 	go func() {
-		log.Println(http.ListenAndServe(":23232", nil))
+		log.Println(http.ListenAndServe(":22202", nil))
 	}()
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
-	ln, err := net.Listen("tcp", ":23231")
+	ln, err := net.Listen("tcp", ":22201")
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:23234", db)
+	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:22203", db)
 	if err != nil {
 		return err
 	}
