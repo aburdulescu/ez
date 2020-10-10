@@ -22,30 +22,34 @@ type LocalServer struct {
 }
 
 func NewLocalServer(db *badger.DB) LocalServer {
-	return LocalServer{db: db}
+	s := LocalServer{db: db}
+	http.Handle("/list", errHandler(s.handleList))
+	http.Handle("/add", errHandler(s.handleAdd))
+	http.Handle("/rm", errHandler(s.handleRm))
+	http.Handle("/sync", errHandler(s.handleSync))
+	return s
 }
 
-func (s LocalServer) handlerRequest(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Method, r.RequestURI)
-	var err error
-	var status int
-	switch r.Method {
-	case "GET":
-		status, err = s.handleGet(w, r)
-	case "POST":
-		status, err = s.handlePost(w, r)
-	case "DELETE":
-		status, err = s.handleDelete(w, r)
-	default:
-		err = errors.New("unknown HTTP method")
-		status = http.StatusBadRequest
-	}
-	if err != nil {
-		http.Error(w, err.Error(), status)
+func (s LocalServer) Run() {
+	log.Fatal(http.ListenAndServe(":22202", nil))
+}
+
+func errHandler(f func(w http.ResponseWriter, r *http.Request) (int, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Method, r.URL)
+		status, err := f(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), status)
+		}
 	}
 }
 
-func (s LocalServer) handleGet(w http.ResponseWriter, r *http.Request) (int, error) {
+func (s LocalServer) handleSync(w http.ResponseWriter, r *http.Request) (int, error) {
+	log.Println("sync called")
+	return http.StatusOK, nil
+}
+
+func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
 	files, err := s.getFiles()
 	if err != nil {
@@ -87,15 +91,13 @@ func (s LocalServer) getFiles() ([]ezt.IFile, error) {
 	return files, err
 }
 
-func (s LocalServer) handlePost(w http.ResponseWriter, r *http.Request) (int, error) {
+func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
-	data := struct {
-		Filepath string `json:"filepath"`
-	}{}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return http.StatusBadRequest, err
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		return http.StatusBadRequest, errors.New("missing 'path' parameter")
 	}
-	if err := s.addFile(data.Filepath); err != nil {
+	if err := s.addFile(path); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
@@ -153,7 +155,7 @@ func (s LocalServer) addFile(path string) error {
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(trackerAddr, "application/json", buf)
+	rsp, err := http.Post(trackerURL, "application/json", buf)
 	if err != nil {
 		return err
 	}
@@ -161,7 +163,7 @@ func (s LocalServer) addFile(path string) error {
 	return nil
 }
 
-func (s LocalServer) handleDelete(w http.ResponseWriter, r *http.Request) (int, error) {
+func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
 	hash := r.URL.Query().Get("hash")
 	if hash == "" {

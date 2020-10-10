@@ -34,7 +34,7 @@ func NewTrackerProbeServer(addr string, db *badger.DB) (TrackerProbeServer, erro
 	}
 	s := TrackerProbeServer{conn: c, db: db}
 	if err := s.updateTracker(); err != nil {
-		return TrackerProbeServer{}, err
+		log.Println(err)
 	}
 	return s, nil
 }
@@ -93,7 +93,7 @@ func (s TrackerProbeServer) updateTracker() error {
 	if err := json.NewEncoder(buf).Encode(params); err != nil {
 		return err
 	}
-	rsp, err := http.Post(trackerAddr, "application/json", buf)
+	rsp, err := http.Post(trackerURL, "application/json", buf)
 	if err != nil {
 		return err
 	}
