@@ -63,8 +63,8 @@ func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, er
 	return http.StatusOK, nil
 }
 
-func (s LocalServer) getFiles() ([]ezt.IFile, error) {
-	var files []ezt.IFile
+func (s LocalServer) getFiles() ([]ezt.File, error) {
+	var files []ezt.File
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
@@ -80,7 +80,8 @@ func (s LocalServer) getFiles() ([]ezt.IFile, error) {
 					if err := json.Unmarshal(v, &i); err != nil {
 						return err
 					}
-					files = append(files, i)
+					hash := strings.Split(kstr, ".")[0]
+					files = append(files, ezt.File{Hash: hash, IFile: i})
 				}
 				return nil
 			})

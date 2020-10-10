@@ -59,12 +59,12 @@ func onLs(args ...string) error {
 		return err
 	}
 	defer rsp.Body.Close()
-	var files []ezt.IFile
+	var files []ezt.File
 	if err := json.NewDecoder(rsp.Body).Decode(&files); err != nil {
 		return err
 	}
 	for _, f := range files {
-		fmt.Printf("%s %s %d\n", f.Dir, f.Name, f.Size)
+		fmt.Printf("%s\t%s/%s\t%d\n", f.Hash, f.IFile.Dir, f.IFile.Name, f.IFile.Size)
 	}
 	return nil
 }
