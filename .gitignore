@@ -1,4 +1,5 @@
-cmd/ezl/ezl
 cmd/ez/ez
+cmd/ezl/ezl
 cmd/ezt/ezt
 cmd/ezs/ezs
+cmd/ezs/db
