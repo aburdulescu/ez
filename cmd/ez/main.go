@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -88,12 +89,11 @@ func getTracker() (string, error) {
 		return "", err
 	}
 	defer f.Close()
-	b := make([]byte, 256)
-	n, err := f.Read(b)
+	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		return "", err
 	}
-	return string(b[:n]), nil
+	return string(b), nil
 }
 
 func getTrackerURL() (string, error) {
