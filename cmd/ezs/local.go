@@ -36,6 +36,7 @@ func (s LocalServer) Run() {
 
 func errHandler(f func(w http.ResponseWriter, r *http.Request) (int, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
 		log.Println(r.Method, r.URL)
 		status, err := f(w, r)
 		if err != nil {
@@ -45,12 +46,13 @@ func errHandler(f func(w http.ResponseWriter, r *http.Request) (int, error)) htt
 }
 
 func (s LocalServer) handleSync(w http.ResponseWriter, r *http.Request) (int, error) {
-	log.Println("sync called")
+	if err := updateTracker(s.db); err != nil {
+		return http.StatusInternalServerError, err
+	}
 	return http.StatusOK, nil
 }
 
 func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, error) {
-	defer r.Body.Close()
 	files, err := s.getFiles()
 	if err != nil {
 		return http.StatusInternalServerError, err
@@ -92,7 +94,6 @@ func (s LocalServer) getFiles() ([]ezt.IFile, error) {
 }
 
 func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, error) {
-	defer r.Body.Close()
 	path := r.URL.Query().Get("path")
 	if path == "" {
 		return http.StatusBadRequest, errors.New("missing 'path' parameter")
@@ -164,12 +165,42 @@ func (s LocalServer) addFile(path string) error {
 }
 
 func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, error) {
-	defer r.Body.Close()
 	hash := r.URL.Query().Get("hash")
 	if hash == "" {
 		return http.StatusBadRequest, errors.New("missing 'hash' parameter")
 	}
+	if err := s.removeFile(hash); err != nil {
+		return http.StatusInternalServerError, err
+	}
 	return http.StatusOK, nil
+}
+
+func (s LocalServer) removeFile(hash string) error {
+	err := s.db.Update(func(txn *badger.Txn) error {
+		ifileKey := hash + ".ifile"
+		if err := txn.Delete([]byte(ifileKey)); err != nil {
+			return err
+		}
+		chunksKey := hash + ".chunks"
+		if err := txn.Delete([]byte(chunksKey)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("DELETE", trackerURL+"?hash="+hash+"&addr="+seedAddr+":22201", nil)
+	if err != nil {
+		return err
+	}
+	client := http.DefaultClient
+	rsp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	return nil
 }
 
 func respond(w http.ResponseWriter, data interface{}) error {
@@ -178,7 +209,6 @@ func respond(w http.ResponseWriter, data interface{}) error {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	buf.Truncate(buf.Len() - 1)
 	if _, err := io.Copy(w, &buf); err != nil {
 		return err
 	}

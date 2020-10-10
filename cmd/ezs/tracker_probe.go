@@ -33,7 +33,7 @@ func NewTrackerProbeServer(addr string, db *badger.DB) (TrackerProbeServer, erro
 		return TrackerProbeServer{}, err
 	}
 	s := TrackerProbeServer{conn: c, db: db}
-	if err := s.updateTracker(); err != nil {
+	if err := updateTracker(s.db); err != nil {
 		log.Println(err)
 	}
 	return s, nil
@@ -47,16 +47,17 @@ func (s TrackerProbeServer) ListenAndServe() {
 			log.Println(err)
 			return
 		}
-		if err := s.updateTracker(); err != nil {
+		if err := updateTracker(s.db); err != nil {
 			log.Println(err)
 			return
 		}
 	}
 }
 
-func (s TrackerProbeServer) updateTracker() error {
+// TODO: first get the file from the tracker, compare with local ones and send the diff to tracker
+func updateTracker(db *badger.DB) error {
 	var files []ezt.File
-	err := s.db.View(func(txn *badger.Txn) error {
+	err := db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
 		it := txn.NewIterator(opts)
