@@ -1,26 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
+	"path/filepath"
 
-	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/cli"
 	"github.com/aburdulescu/ez/ezt"
-	"github.com/aburdulescu/ez/hash"
-
-	badger "github.com/dgraph-io/badger/v2"
 )
-
-type Config struct {
-	TrackerURL string `json:"trackerUrl"`
-	SeederAddr string `json:"seederAddr"`
-	DBPath     string `json:"dbPath"`
-}
 
 var c = cli.New(os.Args[0], []cli.Cmd{
 	cli.Cmd{
@@ -45,66 +34,39 @@ var c = cli.New(os.Args[0], []cli.Cmd{
 	},
 })
 
-var db *badger.DB
-var cfg Config
-
 func main() {
-	f, err := os.Open("ezl.json")
-	if err != nil {
-		handleErr(err)
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		handleErr(err)
-	}
+}
+
+func run() error {
 	args := os.Args[1:]
 	if len(args) < 1 {
-		handleErr(fmt.Errorf("command not provided"))
+		return fmt.Errorf("command not provided")
 	}
-	db, err = badger.Open(badger.DefaultOptions(cfg.DBPath).WithLogger(nil))
-	if err != nil {
-		handleErr(err)
-	}
-	defer db.Close()
 	name := args[0]
 	args = args[1:]
 	if err := c.Handle(name, args); err != nil {
-		handleErr(err)
+		return err
 	}
+	return nil
 }
-
-func handleErr(err error) {
-	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	c.Usage()
-	os.Exit(1)
-}
-
 func onLs(args ...string) error {
-	err := db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					fmt.Printf("%s\t%s\t%s\t\t%d\n", strings.Split(kstr, ".")[0], i.Dir, i.Name, i.Size)
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return err
+	rsp, err := http.Get("http://localhost:22202/list")
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	var files []ezt.File
+	if err := json.NewDecoder(rsp.Body).Decode(&files); err != nil {
+		return err
+	}
+	for _, f := range files {
+		fmt.Printf("%s\t%s/%s\t%d\n", f.Hash, f.IFile.Dir, f.IFile.Name, f.IFile.Size)
+	}
+	return nil
 }
 
 func onAdd(args ...string) error {
@@ -112,58 +74,14 @@ func onAdd(args ...string) error {
 		return fmt.Errorf("filepath wasn't provided")
 	}
 	path := args[0]
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	i, err := ezt.NewIFile(f, path)
-	if err != nil {
-		return err
-	}
-	chunks, err := chunks.FromFile(f, i.Size)
-	if err != nil {
-		return err
-	}
-	h := hash.FromChunkHashes(chunks)
-	if err != nil {
-		return err
-	}
-	ifileBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
-		return err
-	}
-	chunksBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
-		return err
-	}
-	k := hash.ALG + "-" + h.String()
-	err = db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(k+".ifile"), ifileBuf.Bytes())
+	if !filepath.IsAbs(path) {
+		pwd, err := os.Getwd()
 		if err != nil {
 			return err
 		}
-		err = txn.Set([]byte(k+".chunks"), chunksBuf.Bytes())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
+		path = filepath.Join(pwd, path)
 	}
-	fmt.Println(k)
-	params := ezt.PostParams{
-		Files: []ezt.File{
-			ezt.File{Hash: k, IFile: i},
-		},
-		Addr: cfg.SeederAddr,
-	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(params); err != nil {
-		return err
-	}
-	rsp, err := http.Post(cfg.TrackerURL, "application/json", buf)
+	rsp, err := http.Get("http://localhost:22202/add?path=" + path)
 	if err != nil {
 		return err
 	}
@@ -176,26 +94,7 @@ func onRm(args ...string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	err := db.Update(func(txn *badger.Txn) error {
-		ifileKey := id + ".ifile"
-		if err := txn.Delete([]byte(ifileKey)); err != nil {
-			return err
-		}
-		chunksKey := id + ".chunks"
-		if err := txn.Delete([]byte(chunksKey)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("DELETE", cfg.TrackerURL+"?hash="+id+"&addr="+cfg.SeederAddr, nil)
-	if err != nil {
-		return err
-	}
-	client := http.DefaultClient
-	rsp, err := client.Do(req)
+	rsp, err := http.Get("http://localhost:22202/rm?hash=" + id)
 	if err != nil {
 		return err
 	}
@@ -203,47 +102,8 @@ func onRm(args ...string) error {
 	return nil
 }
 
-// TODO: first get the file from the tracker, compare with local ones and send the diff to tracker
 func onSync(args ...string) error {
-	var files []ezt.File
-	err := db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					id := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Hash: id, IFile: i})
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	params := ezt.PostParams{
-		Files: files,
-		Addr:  cfg.SeederAddr,
-	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(params); err != nil {
-		return err
-	}
-	rsp, err := http.Post(cfg.TrackerURL, "application/json", buf)
+	rsp, err := http.Get("http://localhost:22202/sync")
 	if err != nil {
 		return err
 	}
