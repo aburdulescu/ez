@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
+	"time"
 
 	"github.com/aburdulescu/ez/ezt"
 )
@@ -20,7 +21,20 @@ type Server struct {
 func main() {
 	s := Server{NewKV()}
 	http.HandleFunc("/", s.handleRequest)
+	go sendProbeToSeeders()
 	log.Fatal(http.ListenAndServe(":22200", nil))
+}
+
+func sendProbeToSeeders() {
+	time.Sleep(200 * time.Millisecond)
+	c, err := NewTrackerProbeClient("239.23.23.0:22203")
+	if err != nil {
+		log.Println(err)
+	}
+	b := []byte("hello")
+	if _, err := c.Write(b); err != nil {
+		log.Println(err)
+	}
 }
 
 func (s Server) handleRequest(w http.ResponseWriter, r *http.Request) {

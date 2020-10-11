@@ -47,6 +47,7 @@ func (s TrackerProbeServer) ListenAndServe() {
 			log.Println(err)
 			return
 		}
+		log.Println("tracker sent probe")
 		if err := updateTracker(s.db); err != nil {
 			log.Println(err)
 			return
