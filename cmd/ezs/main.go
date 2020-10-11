@@ -38,6 +38,7 @@ func run() error {
 		return fmt.Errorf("trackeraddr is empty")
 	}
 
+	seedAddr = seedAddr + ":22201"
 	trackerURL = "http://" + trackerAddr + ":22200" + "/"
 
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)

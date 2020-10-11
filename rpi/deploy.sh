@@ -29,9 +29,6 @@ seeders=$(echo $cfg | jq -r ".seeders")
 seedersLength=$(echo $seeders | jq "length")
 
 build() {
-    ezDataFmt='{"trackerAddr":"%s"}'
-    ezlDataFmt='{"trackerAddr":"%s","seederAddr":"%s","dbPath":"./db"}'
-    ezsDataFmt='{"dbPath":"./db"}'
     serviceDataFmt='{"description":"%s","execStart":"%s"}'
 
     pushd ../
@@ -51,11 +48,10 @@ build() {
         mkdir -p $seederDir
 
         cp ../cmd/ezl/ezl $seederDir/ezl
-        printf $ezlDataFmt $trackerAddr $addr | tpl -t templates/ezl.json.tpl > $seederDir/ezl.json
 
         cp ../cmd/ezs/ezs $seederDir/ezs
-        printf $ezsDataFmt | tpl -t templates/ezs.json.tpl > $seederDir/ezs.json
-        printf $serviceDataFmt "ez seeder server" "$homePath/ezs -dbpath $homePath/db" | tpl -t templates/service.tpl > $seederDir/ezs.service
+        execStart="$homePath/ezs -dbpath="$(dirname $homePath)"/db -seedaddr="$addr" -trackeraddr="$trackerAddr
+        printf $serviceDataFmt "ez seeder server" "$execStart" | tpl -t templates/service.tpl > $seederDir/ezs.service
 
         if [[ $isTracker == "true" ]]
         then
@@ -65,7 +61,6 @@ build() {
         if [[ $isClient == "true" ]]
         then
             cp ../cmd/ez/ez $seederDir/ez
-            printf $ezDataFmt $trackerAddr | tpl -t templates/ez.json.tpl > $seederDir/ez.json
         fi
     done
 }
