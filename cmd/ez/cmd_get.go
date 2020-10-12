@@ -12,6 +12,7 @@ import (
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/spf13/cobra"
+	// pb "github.com/cheggaaa/pb/v3" // TODO: use it for progress bar
 )
 
 func onGet(cmd *cobra.Command, args []string) error {
