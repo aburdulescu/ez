@@ -2,14 +2,45 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
+	"github.com/spf13/cobra"
 )
+
+func onGet(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("id wasn't provided")
+	}
+	id := args[0]
+	trackerURL, err := getTrackerURL()
+	if err != nil {
+		return err
+	}
+	rsp, err := http.Get(trackerURL + "?hash=" + id)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer rsp.Body.Close()
+	r := ezt.GetResult{}
+	if err := json.NewDecoder(rsp.Body).Decode(&r); err != nil {
+		log.Println(err)
+		return err
+	}
+	var d Downloader
+	if err := d.Run(id, r.IFile, r.Peers); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
 
 const MAX_CHUNKS uint64 = 8
 
