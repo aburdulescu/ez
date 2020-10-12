@@ -17,7 +17,6 @@ var (
 	getCmd = &cobra.Command{
 		Use:   "get",
 		Short: "Download a file",
-		Args:  cobra.MinimumNArgs(1),
 		RunE:  onGet,
 	}
 	trackerCmd = &cobra.Command{
