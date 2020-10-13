@@ -59,7 +59,10 @@ type Chunk struct {
 
 func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	d.id = id
-	d.peers = peers
+	d.peers = removeUnavailablePeers(peers)
+	if len(d.peers) == 0 {
+		return fmt.Errorf("no peers available")
+	}
 	f, err := os.Create(ifile.Name)
 	if err != nil {
 		log.Println(err)
@@ -101,6 +104,20 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	return nil
 }
 
+func removeUnavailablePeers(peers []string) []string {
+	var goodPeers []string
+	for _, peer := range peers {
+		c, err := DialEzs(peer)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		c.Close()
+		goodPeers = append(goodPeers, peer)
+	}
+	return goodPeers
+}
+
 func (d Downloader) dwChunks(start, end uint64) error {
 	peerCount := 0
 	result := make(chan Chunk)
@@ -136,17 +153,17 @@ func (d Downloader) dwChunks(start, end uint64) error {
 }
 
 func fetch(id string, addr string, index uint64, result chan Chunk) {
-	var client Client
-	if err := client.Dial(addr); err != nil {
+	c, err := DialEzs(addr)
+	if err != nil {
 		log.Println(err)
 		return
 	}
-	defer client.Close()
-	if err := client.Connect(id); err != nil {
+	defer c.Close()
+	if err := c.Connect(id); err != nil {
 		log.Println(err)
 		return
 	}
-	buf, err := client.Getchunk(index)
+	buf, err := c.Getchunk(index)
 	if err != nil {
 		result <- Chunk{err, index, nil}
 		return

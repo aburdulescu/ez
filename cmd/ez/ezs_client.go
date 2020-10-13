@@ -31,14 +31,14 @@ type Client struct {
 	conn net.Conn
 }
 
-func (c *Client) Dial(addr string) error {
+func DialEzs(addr string) (Client, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Println(err)
-		return err
+		return Client{}, err
 	}
-	c.conn = conn
-	return nil
+	c := Client{conn: conn}
+	return c, nil
 }
 
 func (c Client) Close() {
