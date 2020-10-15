@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -43,11 +42,6 @@ func run() error {
 
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 
-	ln, err := net.Listen("tcp", ":22201")
-	if err != nil {
-		return err
-	}
-
 	opts := badger.DefaultOptions(dbPath).WithLogger(nil)
 	db, err := badger.Open(opts)
 	if err != nil {
@@ -64,24 +58,13 @@ func run() error {
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go handleCtrlC(c, db)
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		c := Client{
-			db:   db,
-			conn: conn,
-		}
-		go c.run()
-	}
+	waitForSignal(c, db)
+
+	return nil
 }
 
-func handleCtrlC(c chan os.Signal, db *badger.DB) {
+func waitForSignal(c chan os.Signal, db *badger.DB) {
 	<-c
 	db.Close()
-	os.Exit(0)
 }
