@@ -27,25 +27,25 @@ func ReleaseChunk(b []byte) {
 	chunkPool.Put(b[:0])
 }
 
-type Client struct {
+type SeederClient struct {
 	conn net.Conn
 }
 
-func DialEzs(addr string) (Client, error) {
+func DialSeederClient(addr string) (SeederClient, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Println(err)
-		return Client{}, err
+		return SeederClient{}, err
 	}
-	c := Client{conn: conn}
+	c := SeederClient{conn: conn}
 	return c, nil
 }
 
-func (c Client) Close() {
+func (c SeederClient) Close() {
 	c.conn.Close()
 }
 
-func (c Client) Connect(id string) error {
+func (c SeederClient) Connect(id string) error {
 	req := ezs.Request{
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
@@ -66,7 +66,7 @@ func (c Client) Connect(id string) error {
 	return nil
 }
 
-func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
+func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	req := ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
@@ -112,7 +112,7 @@ func (c Client) Getchunk(index uint64) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func (c Client) Send(req ezs.Request) error {
+func (c SeederClient) Send(req ezs.Request) error {
 	b, err := proto.Marshal(&req)
 	if err != nil {
 		log.Println(err)
@@ -125,7 +125,7 @@ func (c Client) Send(req ezs.Request) error {
 	return nil
 }
 
-func (c Client) Recv() (*ezs.Response, error) {
+func (c SeederClient) Recv() (*ezs.Response, error) {
 	b, err := ezs.Read(c.conn)
 	if err != nil {
 		log.Println(err)

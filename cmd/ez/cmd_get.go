@@ -107,7 +107,7 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 func removeUnavailablePeers(peers []string) []string {
 	var goodPeers []string
 	for _, peer := range peers {
-		c, err := DialEzs(peer)
+		c, err := DialSeederClient(peer)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -153,7 +153,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 }
 
 func fetch(id string, addr string, index uint64, result chan Chunk) {
-	c, err := DialEzs(addr)
+	c, err := DialSeederClient(addr)
 	if err != nil {
 		log.Println(err)
 		return
