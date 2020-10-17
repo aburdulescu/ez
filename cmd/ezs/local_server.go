@@ -4,24 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/aburdulescu/ez/hash"
-	badger "github.com/dgraph-io/badger/v2"
 )
 
 type LocalServer struct {
-	db *badger.DB
+	db DB
 }
 
-func NewLocalServer(db *badger.DB) LocalServer {
+func NewLocalServer(db DB) LocalServer {
 	s := LocalServer{db: db}
 	http.Handle("/list", errHandler(s.handleList))
 	http.Handle("/add", errHandler(s.handleAdd))
@@ -53,7 +50,7 @@ func (s LocalServer) handleSync(w http.ResponseWriter, r *http.Request) (int, er
 }
 
 func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, error) {
-	files, err := s.getFiles()
+	files, err := s.db.GetAll()
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -61,37 +58,6 @@ func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, er
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
-}
-
-func (s LocalServer) getFiles() ([]ezt.File, error) {
-	var files []ezt.File
-	err := s.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					hash := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Hash: hash, IFile: i})
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	return files, err
 }
 
 func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -131,25 +97,13 @@ func (s LocalServer) addFile(path string) error {
 	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
 		return err
 	}
-	k := hash.ALG + "-" + h.String()
-	err = s.db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(k+".ifile"), ifileBuf.Bytes())
-		if err != nil {
-			return err
-		}
-		err = txn.Set([]byte(k+".chunks"), chunksBuf.Bytes())
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	id, err := s.db.Add(h, i, chunks)
 	if err != nil {
 		return err
 	}
-	fmt.Println(k)
 	params := ezt.PostParams{
 		Files: []ezt.File{
-			ezt.File{Hash: k, IFile: i},
+			ezt.File{Hash: id, IFile: i},
 		},
 		Addr: seedAddr,
 	}
@@ -177,18 +131,7 @@ func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, erro
 }
 
 func (s LocalServer) removeFile(hash string) error {
-	err := s.db.Update(func(txn *badger.Txn) error {
-		ifileKey := hash + ".ifile"
-		if err := txn.Delete([]byte(ifileKey)); err != nil {
-			return err
-		}
-		chunksKey := hash + ".chunks"
-		if err := txn.Delete([]byte(chunksKey)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
+	if err := s.db.Delete(hash); err != nil {
 		return err
 	}
 	req, err := http.NewRequest("DELETE", trackerURL+"?hash="+hash+"&addr="+seedAddr+":22201", nil)

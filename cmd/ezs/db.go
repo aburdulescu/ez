@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"strings"
 
 	"github.com/aburdulescu/ez/ezt"
@@ -27,7 +28,7 @@ func (db DB) Close() {
 	db.db.Close()
 }
 
-func (db DB) List() ([]ezt.File, error) {
+func (db DB) GetAll() ([]ezt.File, error) {
 	var files []ezt.File
 	err := db.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
@@ -58,9 +59,60 @@ func (db DB) List() ([]ezt.File, error) {
 	return files, err
 }
 
-type entry struct {
-	k []byte
-	v []byte
+func (db DB) GetIFile(k string) (ezt.IFile, error) {
+	v, err := db.get(k + ".ifile")
+	if err != nil {
+		return ezt.IFile{}, err
+	}
+	var ifile ezt.IFile
+	if err := json.Unmarshal(v, &ifile); err != nil {
+		return ezt.IFile{}, err
+	}
+	return ifile, nil
+}
+
+func (db DB) GetChunkHashes(k string) ([]hash.Hash, error) {
+	v, err := db.get(k + ".chunks")
+	if err != nil {
+		return nil, err
+	}
+	var hashes []hash.Hash
+	if err := json.Unmarshal(v, &hashes); err != nil {
+		return nil, err
+	}
+	return hashes, nil
+}
+
+func (db DB) Add(h hash.Hash, i ezt.IFile, chunks []hash.Hash) (string, error) {
+	ifileBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
+		return "", err
+	}
+	chunksBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
+		return "", err
+	}
+	k := hash.ALG + "-" + h.String()
+	entries := []*badger.Entry{
+		badger.NewEntry([]byte(k+".ifile"), ifileBuf.Bytes()),
+		badger.NewEntry([]byte(k+".chunks"), chunksBuf.Bytes()),
+	}
+	return k, db.add(entries)
+}
+
+func (db DB) Delete(k string) error {
+	err := db.db.Update(func(txn *badger.Txn) error {
+		ifileKey := k + ".ifile"
+		if err := txn.Delete([]byte(ifileKey)); err != nil {
+			return err
+		}
+		chunksKey := k + ".chunks"
+		if err := txn.Delete([]byte(chunksKey)); err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
 }
 
 func (db DB) add(entries []*badger.Entry) error {
@@ -75,19 +127,20 @@ func (db DB) add(entries []*badger.Entry) error {
 	})
 }
 
-func (db DB) Add(h hash.Hash, i ezt.IFile, chunks []hash.Hash) error {
-	ifileBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
-		return err
-	}
-	chunksBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
-		return err
-	}
-	k := hash.ALG + "-" + h.String()
-	entries := []*badger.Entry{
-		badger.NewEntry([]byte(k+".ifile"), ifileBuf.Bytes()),
-		badger.NewEntry([]byte(k+".chunks"), chunksBuf.Bytes()),
-	}
-	return db.add(entries)
+func (db DB) get(k string) ([]byte, error) {
+	var v []byte
+	err := db.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(k))
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		v, err = item.ValueCopy(nil)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return nil
+	})
+	return v, err
 }

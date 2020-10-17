@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -11,9 +10,6 @@ import (
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezs"
-	"github.com/aburdulescu/ez/ezt"
-	"github.com/aburdulescu/ez/hash"
-	badger "github.com/dgraph-io/badger/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,16 +21,16 @@ var chunkPool = sync.Pool{
 
 type SeederServer struct {
 	ln net.Listener
-	db *badger.DB
+	db DB
 }
 
 type SeederServerReqHandler struct {
 	id   string
 	conn net.Conn
-	db   *badger.DB
+	db   DB
 }
 
-func NewSeederServer(db *badger.DB) (SeederServer, error) {
+func NewSeederServer(db DB) (SeederServer, error) {
 	ln, err := net.Listen("tcp", ":22201")
 	if err != nil {
 		return SeederServer{}, err
@@ -151,12 +147,12 @@ func (h SeederServerReqHandler) handleDisconnect() error {
 }
 
 func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
-	chunkHashes, err := h.getChunkHashes()
+	chunkHashes, err := h.db.GetChunkHashes(string(h.id))
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	ifile, err := h.getIFile()
+	ifile, err := h.db.GetIFile(string(h.id))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -243,48 +239,4 @@ func (h SeederServerReqHandler) handleGetpiece(index uint64) error {
 		return err
 	}
 	return nil
-}
-
-func (h SeederServerReqHandler) getIFile() (ezt.IFile, error) {
-	var i ezt.IFile
-	err := h.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(string(h.id) + ".ifile"))
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := json.Unmarshal(v, &i); err != nil {
-			log.Println(err)
-			return err
-		}
-		return nil
-	})
-	return i, err
-}
-
-func (h SeederServerReqHandler) getChunkHashes() ([]hash.Hash, error) {
-	var hashes []hash.Hash
-	err := h.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(string(h.id) + ".chunks"))
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := json.Unmarshal(v, &hashes); err != nil {
-			log.Println(err)
-			return err
-		}
-		return nil
-	})
-	return hashes, err
 }

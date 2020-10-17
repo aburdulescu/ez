@@ -8,8 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	badger "github.com/dgraph-io/badger/v2"
 )
 
 func main() {
@@ -42,8 +40,7 @@ func run() error {
 
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 
-	opts := badger.DefaultOptions(dbPath).WithLogger(nil)
-	db, err := badger.Open(opts)
+	db, err := NewDB(dbPath)
 	if err != nil {
 		return err
 	}
@@ -53,6 +50,12 @@ func run() error {
 		return err
 	}
 	go trackerProbeServer.ListenAndServe()
+
+	seederServer, err := NewSeederServer(db)
+	if err != nil {
+		return err
+	}
+	go seederServer.ListenAndServe()
 
 	go NewLocalServer(db).Run()
 
@@ -64,7 +67,7 @@ func run() error {
 	return nil
 }
 
-func waitForSignal(c chan os.Signal, db *badger.DB) {
+func waitForSignal(c chan os.Signal, db DB) {
 	<-c
 	db.Close()
 }
