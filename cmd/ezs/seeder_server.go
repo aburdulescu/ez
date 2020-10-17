@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -11,9 +10,6 @@ import (
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezs"
-	"github.com/aburdulescu/ez/ezt"
-	"github.com/aburdulescu/ez/hash"
-	badger "github.com/dgraph-io/badger/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,17 +19,48 @@ var chunkPool = sync.Pool{
 	},
 }
 
-type Client struct {
-	id   string
-	conn net.Conn
-	db   *badger.DB
+type SeederServer struct {
+	ln net.Listener
+	db DB
 }
 
-func (c Client) run() {
-	defer c.conn.Close()
-	remAddr := c.conn.RemoteAddr().String()
+type SeederServerReqHandler struct {
+	id   string
+	conn net.Conn
+	db   DB
+}
+
+func NewSeederServer(db DB) (SeederServer, error) {
+	ln, err := net.Listen("tcp", ":22201")
+	if err != nil {
+		return SeederServer{}, err
+	}
+	s := SeederServer{
+		ln: ln, db: db,
+	}
+	return s, nil
+}
+
+func (s SeederServer) ListenAndServe() {
 	for {
-		req, err := c.Recv()
+		conn, err := s.ln.Accept()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		h := SeederServerReqHandler{
+			db:   s.db,
+			conn: conn,
+		}
+		go h.run()
+	}
+}
+
+func (h SeederServerReqHandler) run() {
+	defer h.conn.Close()
+	remAddr := h.conn.RemoteAddr().String()
+	for {
+		req, err := h.Recv()
 		if err == io.EOF {
 			return
 		}
@@ -44,21 +71,21 @@ func (c Client) run() {
 		reqType := req.GetType()
 		switch reqType {
 		case ezs.RequestType_CONNECT:
-			c.id = req.GetId()
-			if err := c.handleConnect(); err != nil {
+			h.id = req.GetId()
+			if err := h.handleConnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_DISCONNECT:
-			c.id = ""
-			if err := c.handleDisconnect(); err != nil {
+			h.id = ""
+			if err := h.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_GETCHUNK:
-			if err := c.handleGetchunk(req.GetIndex()); err != nil {
+			if err := h.handleGetchunk(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_GETPIECE:
-			if err := c.handleGetpiece(req.GetIndex()); err != nil {
+			if err := h.handleGetpiece(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		default:
@@ -67,21 +94,21 @@ func (c Client) run() {
 	}
 }
 
-func (c Client) Send(rsp ezs.Response) error {
+func (h SeederServerReqHandler) Send(rsp ezs.Response) error {
 	b, err := proto.Marshal(&rsp)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	if err := ezs.Write(c.conn, b); err != nil {
+	if err := ezs.Write(h.conn, b); err != nil {
 		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func (c Client) Recv() (*ezs.Request, error) {
-	b, err := ezs.Read(c.conn)
+func (h SeederServerReqHandler) Recv() (*ezs.Request, error) {
+	b, err := ezs.Read(h.conn)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -95,37 +122,37 @@ func (c Client) Recv() (*ezs.Request, error) {
 	return req, nil
 }
 
-func (c Client) handleConnect() error {
+func (h SeederServerReqHandler) handleConnect() error {
 	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
-	if err := c.Send(rsp); err != nil {
+	if err := h.Send(rsp); err != nil {
 		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func (c Client) handleDisconnect() error {
+func (h SeederServerReqHandler) handleDisconnect() error {
 	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
 	}
-	if err := c.Send(rsp); err != nil {
+	if err := h.Send(rsp); err != nil {
 		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func (c Client) handleGetchunk(index uint64) error {
-	chunkHashes, err := c.getChunkHashes()
+func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
+	chunkHashes, err := h.db.GetChunkHashes(string(h.id))
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	ifile, err := c.getIFile()
+	ifile, err := h.db.GetIFile(string(h.id))
 	if err != nil {
 		log.Println(err)
 		return err
@@ -152,7 +179,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			},
 		},
 	}
-	if err := c.Send(rsp); err != nil {
+	if err := h.Send(rsp); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -164,7 +191,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			log.Println(err)
 			return err
 		}
-		if err := ezs.Write(c.conn, b); err != nil {
+		if err := ezs.Write(h.conn, b); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -177,7 +204,7 @@ func (c Client) handleGetchunk(index uint64) error {
 			log.Println(err)
 			return err
 		}
-		if err := ezs.Write(c.conn, b); err != nil {
+		if err := ezs.Write(h.conn, b); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -202,58 +229,14 @@ func readChunk(path string, i uint64) ([]byte, int, error) {
 	return b, n, nil
 }
 
-func (c Client) handleGetpiece(index uint64) error {
+func (h SeederServerReqHandler) handleGetpiece(index uint64) error {
 	rsp := ezs.Response{
 		Type:    ezs.ResponseType_PIECE,
 		Payload: &ezs.Response_Piece{[]byte("piece")},
 	}
-	if err := c.Send(rsp); err != nil {
+	if err := h.Send(rsp); err != nil {
 		log.Println(err)
 		return err
 	}
 	return nil
-}
-
-func (c Client) getIFile() (ezt.IFile, error) {
-	var i ezt.IFile
-	err := c.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(string(c.id) + ".ifile"))
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := json.Unmarshal(v, &i); err != nil {
-			log.Println(err)
-			return err
-		}
-		return nil
-	})
-	return i, err
-}
-
-func (c Client) getChunkHashes() ([]hash.Hash, error) {
-	var hashes []hash.Hash
-	err := c.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(string(c.id) + ".chunks"))
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := json.Unmarshal(v, &hashes); err != nil {
-			log.Println(err)
-			return err
-		}
-		return nil
-	})
-	return hashes, err
 }

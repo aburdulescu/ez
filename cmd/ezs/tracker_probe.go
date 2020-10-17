@@ -6,10 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strings"
 
 	"github.com/aburdulescu/ez/ezt"
-	badger "github.com/dgraph-io/badger/v2"
 )
 
 const (
@@ -20,10 +18,10 @@ type HandlerFunc func(*net.UDPConn, *net.UDPAddr, []byte)
 
 type TrackerProbeServer struct {
 	conn *net.UDPConn
-	db   *badger.DB
+	db   DB
 }
 
-func NewTrackerProbeServer(addr string, db *badger.DB) (TrackerProbeServer, error) {
+func NewTrackerProbeServer(addr string, db DB) (TrackerProbeServer, error) {
 	a, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
 		return TrackerProbeServer{}, err
@@ -56,34 +54,8 @@ func (s TrackerProbeServer) ListenAndServe() {
 }
 
 // TODO: first get the file from the tracker, compare with local ones and send the diff to tracker
-func updateTracker(db *badger.DB) error {
-	var files []ezt.File
-	err := db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					id := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Hash: id, IFile: i})
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+func updateTracker(db DB) error {
+	files, err := db.GetAll()
 	if err != nil {
 		return err
 	}
