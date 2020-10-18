@@ -89,33 +89,20 @@ func (s LocalServer) addFile(path string) error {
 	if err != nil {
 		return err
 	}
-	ifileBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
-		return err
-	}
-	chunksBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
-		return err
-	}
 	id, err := s.db.Add(h, i, chunks)
 	if err != nil {
 		return err
 	}
-	params := ezt.PostParams{
+	trackerClient := ezt.NewClient(trackerURL)
+	req := ezt.AddRequest{
 		Files: []ezt.File{
 			ezt.File{Hash: id, IFile: i},
 		},
 		Addr: seedAddr,
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(params); err != nil {
+	if err := trackerClient.Add(req); err != nil {
 		return err
 	}
-	rsp, err := http.Post(trackerURL, "application/json", buf)
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
 	return nil
 }
 
@@ -134,16 +121,13 @@ func (s LocalServer) removeFile(hash string) error {
 	if err := s.db.Delete(hash); err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", trackerURL+"?hash="+hash+"&addr="+seedAddr+":22201", nil)
-	if err != nil {
+	trackerClient := ezt.NewClient(trackerURL)
+	req := ezt.RemoveRequest{
+		Id: hash, Addr: seedAddr,
+	}
+	if err := trackerClient.Remove(req); err != nil {
 		return err
 	}
-	client := http.DefaultClient
-	rsp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
 	return nil
 }
 
