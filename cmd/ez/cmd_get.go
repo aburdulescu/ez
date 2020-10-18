@@ -2,11 +2,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/aburdulescu/ez/chunks"
@@ -24,19 +22,14 @@ func onGet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	rsp, err := http.Get(trackerURL + "?hash=" + id)
+	trackerClient := ezt.NewClient(trackerURL)
+	rsp, err := trackerClient.Get(ezt.GetRequest{id})
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	defer rsp.Body.Close()
-	r := ezt.GetResult{}
-	if err := json.NewDecoder(rsp.Body).Decode(&r); err != nil {
-		log.Println(err)
-		return err
-	}
 	var d Downloader
-	if err := d.Run(id, r.IFile, r.Peers); err != nil {
+	if err := d.Run(id, rsp.IFile, rsp.Peers); err != nil {
 		log.Println(err)
 		return err
 	}

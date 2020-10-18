@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"log"
 	"net"
-	"net/http"
 
 	"github.com/aburdulescu/ez/ezt"
 )
@@ -59,18 +56,13 @@ func updateTracker(db DB) error {
 	if err != nil {
 		return err
 	}
-	params := ezt.PostParams{
+	trackerClient := ezt.NewClient(trackerURL)
+	req := ezt.AddRequest{
 		Files: files,
 		Addr:  seedAddr,
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(params); err != nil {
+	if err := trackerClient.Add(req); err != nil {
 		return err
 	}
-	rsp, err := http.Post(trackerURL, "application/json", buf)
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
 	return nil
 }

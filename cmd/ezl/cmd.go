@@ -29,7 +29,7 @@ var (
 	rmCmd = &cobra.Command{
 		Use:   "rm",
 		Short: "Remove a file",
-		RunE:  onAdd,
+		RunE:  onRm,
 	}
 	syncCmd = &cobra.Command{
 		Use:   "sync",

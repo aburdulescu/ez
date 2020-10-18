@@ -78,12 +78,13 @@ func (s Server) handleGet(w http.ResponseWriter, r *http.Request) (int, error) {
 
 func (s Server) handlePost(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
-	var params ezt.PostParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+	var req ezt.AddRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return http.StatusBadRequest, fmt.Errorf("could not decode body: %v", err.Error())
 	}
-	for i := range params.Files {
-		s.c.Add(params.Files[i].Hash, params.Files[i].IFile, params.Addr)
+	log.Println("post data:", req)
+	for i := range req.Files {
+		s.c.Add(req.Files[i].Hash, req.Files[i].IFile, req.Addr)
 	}
 	return http.StatusOK, nil
 }

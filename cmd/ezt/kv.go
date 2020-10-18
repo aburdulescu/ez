@@ -7,7 +7,7 @@ import (
 	"github.com/aburdulescu/ez/ezt"
 )
 
-type Value ezt.GetResult
+type Value ezt.GetResponse
 
 type KV struct {
 	mu   sync.RWMutex
@@ -80,12 +80,12 @@ func (kv *KV) List() []Value {
 	return values
 }
 
-func (kv *KV) GetAll() []ezt.GetAllResult {
+func (kv *KV) GetAll() []ezt.GetAllItem {
 	kv.mu.RLock()
-	values := make([]ezt.GetAllResult, len(kv.data))
+	values := make([]ezt.GetAllItem, len(kv.data))
 	i := 0
 	for k, v := range kv.data {
-		values[i] = ezt.GetAllResult{
+		values[i] = ezt.GetAllItem{
 			Hash: k,
 			Name: v.IFile.Name,
 			Size: v.IFile.Size,
