@@ -82,6 +82,7 @@ func (s Server) handlePost(w http.ResponseWriter, r *http.Request) (int, error) 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return http.StatusBadRequest, fmt.Errorf("could not decode body: %v", err.Error())
 	}
+	log.Println("post data:", req)
 	for i := range req.Files {
 		s.c.Add(req.Files[i].Hash, req.Files[i].IFile, req.Addr)
 	}

@@ -93,7 +93,7 @@ func (c Client) Add(req AddRequest) error {
 }
 
 func (c Client) Remove(req RemoveRequest) error {
-	query := "?hash=" + req.Id + "&addr=" + req.Addr + ":22201"
+	query := "?hash=" + req.Id + "&addr=" + req.Addr
 	r, err := http.NewRequest("DELETE", c.url+query, nil)
 	if err != nil {
 		return err
