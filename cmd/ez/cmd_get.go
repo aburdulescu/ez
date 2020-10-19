@@ -161,5 +161,6 @@ func fetch(id string, addr string, index uint64, result chan Chunk) {
 		result <- Chunk{err, index, nil}
 		return
 	}
+	// TODO: call disconnect
 	result <- Chunk{nil, index, buf}
 }
