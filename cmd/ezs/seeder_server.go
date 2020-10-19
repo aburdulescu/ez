@@ -10,6 +10,7 @@ import (
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezs"
+	"github.com/aburdulescu/ez/ezt"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,9 +26,11 @@ type SeederServer struct {
 }
 
 type SeederServerReqHandler struct {
-	id   string
-	conn net.Conn
-	db   DB
+	id    string
+	conn  net.Conn
+	db    DB
+	f     *os.File
+	ifile *ezt.IFile
 }
 
 func NewSeederServer(db DB) (SeederServer, error) {
@@ -71,12 +74,10 @@ func (h SeederServerReqHandler) run() {
 		reqType := req.GetType()
 		switch reqType {
 		case ezs.RequestType_CONNECT:
-			h.id = req.GetId()
-			if err := h.handleConnect(); err != nil {
+			if err := h.handleConnect(req.GetId()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_DISCONNECT:
-			h.id = ""
 			if err := h.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
@@ -122,7 +123,20 @@ func (h SeederServerReqHandler) Recv() (*ezs.Request, error) {
 	return req, nil
 }
 
-func (h SeederServerReqHandler) handleConnect() error {
+func (h *SeederServerReqHandler) handleConnect(id string) error {
+	h.id = id
+	ifile, err := h.db.GetIFile(h.id)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	h.ifile = &ifile
+	f, err := os.Open(filepath.Join(ifile.Dir, ifile.Name))
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	h.f = f
 	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
@@ -134,7 +148,11 @@ func (h SeederServerReqHandler) handleConnect() error {
 	return nil
 }
 
-func (h SeederServerReqHandler) handleDisconnect() error {
+func (h *SeederServerReqHandler) handleDisconnect() error {
+	h.id = ""
+	h.ifile = nil
+	h.f.Close()
+	h.f = nil
 	rsp := ezs.Response{
 		Type:    ezs.ResponseType_ACK,
 		Payload: &ezs.Response_Dummy{},
@@ -152,12 +170,7 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		log.Println(err)
 		return err
 	}
-	ifile, err := h.db.GetIFile(string(h.id))
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	chunkBuf, n, err := readChunk(filepath.Join(ifile.Dir, ifile.Name), index)
+	chunkBuf, n, err := readChunk(h.f, index)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -183,7 +196,8 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		log.Println(err)
 		return err
 	}
-	for i := uint64(0); i < npieces-remainder; i++ {
+	i := uint64(0)
+	for ; i < npieces-remainder; i++ {
 		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
 		rsp := ezs.Piece{Piece: piece}
 		b, err := proto.Marshal(&rsp)
@@ -197,7 +211,8 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		}
 	}
 	if remainder != 0 {
-		piece := chunk[(len(chunk)-1)*chunks.PIECE_SIZE:]
+		log.Println(i * chunks.PIECE_SIZE)
+		piece := chunk[i*chunks.PIECE_SIZE:]
 		rsp := &ezs.Piece{Piece: piece}
 		b, err := proto.Marshal(rsp)
 		if err != nil {
@@ -212,13 +227,7 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 	return nil
 }
 
-func readChunk(path string, i uint64) ([]byte, int, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Println(err)
-		return nil, 0, err
-	}
-	defer f.Close()
+func readChunk(f *os.File, i uint64) ([]byte, int, error) {
 	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
 	b := chunkPool.Get().([]byte)
 	n, err := r.Read(b)
