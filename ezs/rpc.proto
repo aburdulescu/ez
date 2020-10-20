@@ -6,7 +6,6 @@ enum RequestType {
     CONNECT = 0;
     DISCONNECT = 1;
     GETCHUNK = 2;
-    GETPIECE = 3;
 }
 
 message Request {

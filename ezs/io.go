@@ -8,16 +8,6 @@ import (
 	"log"
 )
 
-type ClientIf interface {
-	Send(req Request) error
-	Recv() (*Response, error)
-}
-
-type ServerIf interface {
-	Send(rsp Response) error
-	Recv() (*Request, error)
-}
-
 func msgSize(r io.Reader) (int, error) {
 	b := make([]byte, 2)
 	_, err := io.ReadAtLeast(r, b, 2)

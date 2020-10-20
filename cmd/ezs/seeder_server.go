@@ -85,10 +85,6 @@ func (h SeederServerReqHandler) run() {
 			if err := h.handleGetchunk(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
-		case ezs.RequestType_GETPIECE:
-			if err := h.handleGetpiece(req.GetIndex()); err != nil {
-				log.Printf("%s: error: %v\n", remAddr, err)
-			}
 		default:
 			log.Printf("%s: error: unknown request type %v\n", remAddr, reqType)
 		}
@@ -236,16 +232,4 @@ func readChunk(f *os.File, i uint64) ([]byte, int, error) {
 		return nil, 0, err
 	}
 	return b, n, nil
-}
-
-func (h SeederServerReqHandler) handleGetpiece(index uint64) error {
-	rsp := ezs.Response{
-		Type:    ezs.ResponseType_PIECE,
-		Payload: &ezs.Response_Piece{[]byte("piece")},
-	}
-	if err := h.Send(rsp); err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
 }
