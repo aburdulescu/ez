@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
@@ -166,4 +167,72 @@ func fetch(id string, addr string, index uint64, result chan Chunk) {
 		return
 	}
 	result <- Chunk{nil, index, buf}
+}
+
+type ConnPoolItem struct {
+	inUse  bool
+	client SeederClient
+}
+
+type ConnPool struct {
+	mu   sync.RWMutex
+	data map[string][]ConnPoolItem
+}
+
+func NewConnPool(peers []string) (ConnPool, error) {
+	data := make(map[string][]ConnPoolItem)
+	for _, peer := range peers {
+		c, err := DialSeederClient(peer)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		data[peer] = append(data[peer], ConnPoolItem{inUse: false, client: c})
+	}
+	if len(data) == 0 {
+		return ConnPool{}, fmt.Errorf("no peers available")
+	}
+	pool := ConnPool{
+		data: data,
+	}
+	return pool, nil
+}
+
+func (p *ConnPool) Get(addr string) (SeederClient, error) {
+	p.mu.Lock()
+	items, ok := p.data[addr]
+	delete(p.data, addr)
+	p.mu.Unlock()
+	if !ok {
+		return SeederClient{}, fmt.Errorf("key %s does not exists", addr)
+	}
+	for i := range items {
+		if !items[i].inUse {
+			return items[i].client, nil
+		}
+	}
+	client, err := DialSeederClient(addr)
+	if err != nil {
+		log.Println(err)
+		return SeederClient{}, err
+	}
+	return client, nil
+}
+
+func (p *ConnPool) Put(addr string, client SeederClient) {
+	item := ConnPoolItem{inUse: false, client: client}
+	p.mu.Lock()
+	p.data[addr] = append(p.data[addr], item)
+	p.mu.Unlock()
+}
+
+func (p *ConnPool) Release() {
+	p.mu.Lock()
+	for _, items := range p.data {
+		for i := range items {
+			items[i].client.Close()
+		}
+	}
+	p.data = make(map[string][]ConnPoolItem)
+	p.mu.Unlock()
 }
