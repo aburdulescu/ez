@@ -66,6 +66,27 @@ func (c SeederClient) Connect(id string) error {
 	return nil
 }
 
+func (c SeederClient) Disconnect() error {
+	req := ezs.Request{
+		Type:    ezs.RequestType_DISCONNECT,
+		Payload: &ezs.Request_Dummy{},
+	}
+	if err := c.Send(req); err != nil {
+		log.Println(err)
+		return err
+	}
+	rsp, err := c.Recv()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	rspType := rsp.GetType()
+	if rspType != ezs.ResponseType_ACK {
+		return fmt.Errorf("unexpected response: %s", rspType)
+	}
+	return nil
+}
+
 func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	req := ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,

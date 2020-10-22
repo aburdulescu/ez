@@ -161,6 +161,9 @@ func fetch(id string, addr string, index uint64, result chan Chunk) {
 		result <- Chunk{err, index, nil}
 		return
 	}
-	// TODO: call disconnect
+	if err := c.Disconnect(); err != nil {
+		log.Println(err)
+		return
+	}
 	result <- Chunk{nil, index, buf}
 }
