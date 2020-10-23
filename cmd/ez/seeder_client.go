@@ -31,21 +31,27 @@ type SeederClient struct {
 	conn net.Conn
 }
 
-func DialSeederClient(addr string) (SeederClient, error) {
+func DialSeederClient(addr string) (*SeederClient, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Println(err)
-		return SeederClient{}, err
+		return nil, err
 	}
-	c := SeederClient{conn: conn}
+	c := &SeederClient{conn: conn}
 	return c, nil
 }
 
 func (c SeederClient) Close() {
+	if c.conn == nil {
+		return
+	}
 	c.conn.Close()
 }
 
 func (c SeederClient) Connect(id string) error {
+	if c.conn == nil {
+		return fmt.Errorf("client was not initialized properly")
+	}
 	req := ezs.Request{
 		Type:    ezs.RequestType_CONNECT,
 		Payload: &ezs.Request_Id{id},
@@ -67,6 +73,9 @@ func (c SeederClient) Connect(id string) error {
 }
 
 func (c SeederClient) Disconnect() error {
+	if c.conn == nil {
+		return fmt.Errorf("client was not initialized properly")
+	}
 	req := ezs.Request{
 		Type:    ezs.RequestType_DISCONNECT,
 		Payload: &ezs.Request_Dummy{},
@@ -88,6 +97,9 @@ func (c SeederClient) Disconnect() error {
 }
 
 func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
+	if c.conn == nil {
+		return nil, fmt.Errorf("client was not initialized properly")
+	}
 	req := ezs.Request{
 		Type:    ezs.RequestType_GETCHUNK,
 		Payload: &ezs.Request_Index{index},
@@ -134,6 +146,9 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 }
 
 func (c SeederClient) Send(req ezs.Request) error {
+	if c.conn == nil {
+		return fmt.Errorf("client was not initialized properly")
+	}
 	b, err := proto.Marshal(&req)
 	if err != nil {
 		log.Println(err)
@@ -147,6 +162,9 @@ func (c SeederClient) Send(req ezs.Request) error {
 }
 
 func (c SeederClient) Recv() (*ezs.Response, error) {
+	if c.conn == nil {
+		return nil, fmt.Errorf("client was not initialized properly")
+	}
 	b, err := ezs.Read(c.conn)
 	if err != nil {
 		log.Println(err)

@@ -169,70 +169,72 @@ func fetch(id string, addr string, index uint64, result chan Chunk) {
 	result <- Chunk{nil, index, buf}
 }
 
-type ConnPoolItem struct {
-	inUse  bool
-	client SeederClient
-}
+type ConnPoolDialFunc func(addr string) (*SeederClient, error)
 
 type ConnPool struct {
 	mu   sync.RWMutex
-	data map[string][]ConnPoolItem
+	data map[string][]*SeederClient
+
+	dialFunc ConnPoolDialFunc
 }
 
-func NewConnPool(peers []string) (ConnPool, error) {
-	data := make(map[string][]ConnPoolItem)
+func NewConnPool(peers []string, dialFunc ConnPoolDialFunc) (*ConnPool, error) {
+	data := make(map[string][]*SeederClient)
 	for _, peer := range peers {
-		c, err := DialSeederClient(peer)
+		c, err := dialFunc(peer)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		data[peer] = append(data[peer], ConnPoolItem{inUse: false, client: c})
+		data[peer] = append(data[peer], c)
 	}
 	if len(data) == 0 {
-		return ConnPool{}, fmt.Errorf("no peers available")
+		return nil, fmt.Errorf("no peers available")
 	}
-	pool := ConnPool{
-		data: data,
+	pool := &ConnPool{
+		data:     data,
+		dialFunc: dialFunc,
 	}
 	return pool, nil
 }
 
-func (p *ConnPool) Get(addr string) (SeederClient, error) {
+func (p *ConnPool) Get(addr string) (*SeederClient, error) {
 	p.mu.Lock()
-	items, ok := p.data[addr]
-	delete(p.data, addr)
-	p.mu.Unlock()
-	if !ok {
-		return SeederClient{}, fmt.Errorf("key %s does not exists", addr)
-	}
-	for i := range items {
-		if !items[i].inUse {
-			return items[i].client, nil
+	clients, ok := p.data[addr]
+	if ok && len(clients) != 0 {
+		client := clients[0]
+		clients = clients[1:]
+		if len(clients) == 0 {
+			delete(p.data, addr)
+		} else {
+			p.data[addr] = clients
 		}
+		p.mu.Unlock()
+		return client, nil
+	} else {
+		p.mu.Unlock()
+		client, err := p.dialFunc(addr)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		return client, nil
 	}
-	client, err := DialSeederClient(addr)
-	if err != nil {
-		log.Println(err)
-		return SeederClient{}, err
-	}
-	return client, nil
 }
 
-func (p *ConnPool) Put(addr string, client SeederClient) {
-	item := ConnPoolItem{inUse: false, client: client}
+func (p *ConnPool) Put(addr string, client *SeederClient) {
 	p.mu.Lock()
-	p.data[addr] = append(p.data[addr], item)
+	p.data[addr] = append(p.data[addr], client)
 	p.mu.Unlock()
 }
 
 func (p *ConnPool) Release() {
 	p.mu.Lock()
-	for _, items := range p.data {
-		for i := range items {
-			items[i].client.Close()
+	for _, clients := range p.data {
+		for i := range clients {
+			clients[i].Close()
 		}
 	}
-	p.data = make(map[string][]ConnPoolItem)
+	p.data = make(map[string][]*SeederClient)
 	p.mu.Unlock()
 }
