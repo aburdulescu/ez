@@ -74,14 +74,17 @@ func (h SeederServerReqHandler) run() {
 		reqType := req.GetType()
 		switch reqType {
 		case ezs.RequestType_CONNECT:
+			log.Printf("%s: CONNECT %v\n", remAddr, req.GetId())
 			if err := h.handleConnect(req.GetId()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_DISCONNECT:
+			log.Printf("%s: DISCONNECT\n", remAddr)
 			if err := h.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_GETCHUNK:
+			log.Printf("%s: GETCHUNK %v\n", remAddr, req.GetIndex())
 			if err := h.handleGetchunk(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
