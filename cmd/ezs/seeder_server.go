@@ -74,19 +74,18 @@ func (h SeederServerReqHandler) run() {
 		reqType := req.GetType()
 		switch reqType {
 		case ezs.RequestType_CONNECT:
+			log.Printf("%s: CONNECT %v\n", remAddr, req.GetId())
 			if err := h.handleConnect(req.GetId()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_DISCONNECT:
+			log.Printf("%s: DISCONNECT\n", remAddr)
 			if err := h.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case ezs.RequestType_GETCHUNK:
+			log.Printf("%s: GETCHUNK %v\n", remAddr, req.GetIndex())
 			if err := h.handleGetchunk(req.GetIndex()); err != nil {
-				log.Printf("%s: error: %v\n", remAddr, err)
-			}
-		case ezs.RequestType_GETPIECE:
-			if err := h.handleGetpiece(req.GetIndex()); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		default:
@@ -236,16 +235,4 @@ func readChunk(f *os.File, i uint64) ([]byte, int, error) {
 		return nil, 0, err
 	}
 	return b, n, nil
-}
-
-func (h SeederServerReqHandler) handleGetpiece(index uint64) error {
-	rsp := ezs.Response{
-		Type:    ezs.ResponseType_PIECE,
-		Payload: &ezs.Response_Piece{[]byte("piece")},
-	}
-	if err := h.Send(rsp); err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
 }
