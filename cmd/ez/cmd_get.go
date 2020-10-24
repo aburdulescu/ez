@@ -40,9 +40,10 @@ func onGet(cmd *cobra.Command, args []string) error {
 const MAX_CHUNKS uint64 = 8
 
 type Downloader struct {
-	id    string
-	peers []string
-	f     *os.File
+	id       string
+	f        *os.File
+	connPool *ConnPool
+	peers    []string
 }
 
 type Chunk struct {
@@ -53,10 +54,20 @@ type Chunk struct {
 
 func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	d.id = id
-	d.peers = removeUnavailablePeers(peers)
-	if len(d.peers) == 0 {
+	connPool, goodPeers, err := NewConnPool(peers, DialSeederClient)
+	if err != nil {
+		return err
+	}
+	if connPool.Len() == 0 {
 		return fmt.Errorf("no peers available")
 	}
+	d.connPool = connPool
+	d.peers = goodPeers
+	defer d.connPool.Release()
+	if err := d.connPool.Connect(id); err != nil {
+		return err
+	}
+	defer d.connPool.Disconnect()
 	f, err := os.Create(ifile.Name)
 	if err != nil {
 		log.Println(err)
@@ -98,26 +109,18 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	return nil
 }
 
-func removeUnavailablePeers(peers []string) []string {
-	var goodPeers []string
-	for _, peer := range peers {
-		c, err := DialSeederClient(peer)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		c.Close()
-		goodPeers = append(goodPeers, peer)
-	}
-	return goodPeers
-}
-
 func (d Downloader) dwChunks(start, end uint64) error {
 	peerCount := 0
 	result := make(chan Chunk)
 	for index := start; index < end; index++ {
-		peerIndex := peerCount % len(d.peers)
-		go fetch(d.id, d.peers[peerIndex], index, result)
+		peerIndex := peerCount % d.connPool.Len()
+		peer := d.peers[peerIndex]
+		client, err := d.connPool.Get(d.id, peer)
+		if err != nil {
+			// TODO: don't skip it, maybe try with other peer?
+			continue
+		}
+		go d.fetch(peer, client, index, result)
 		peerCount++
 	}
 	chunks := make([]Chunk, end-start)
@@ -146,26 +149,13 @@ func (d Downloader) dwChunks(start, end uint64) error {
 	return nil
 }
 
-func fetch(id string, addr string, index uint64, result chan Chunk) {
-	c, err := DialSeederClient(addr)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer c.Close()
-	if err := c.Connect(id); err != nil {
-		log.Println(err)
-		return
-	}
-	buf, err := c.Getchunk(index)
+func (d Downloader) fetch(peer string, client *SeederClient, index uint64, result chan Chunk) {
+	buf, err := client.Getchunk(index)
 	if err != nil {
 		result <- Chunk{err, index, nil}
 		return
 	}
-	if err := c.Disconnect(); err != nil {
-		log.Println(err)
-		return
-	}
+	d.connPool.Put(peer, client)
 	result <- Chunk{nil, index, buf}
 }
 
@@ -178,7 +168,8 @@ type ConnPool struct {
 	dialFunc ConnPoolDialFunc
 }
 
-func NewConnPool(peers []string, dialFunc ConnPoolDialFunc) (*ConnPool, error) {
+func NewConnPool(peers []string, dialFunc ConnPoolDialFunc) (*ConnPool, []string, error) {
+	var goodPeers []string
 	data := make(map[string][]*SeederClient)
 	for _, peer := range peers {
 		c, err := dialFunc(peer)
@@ -187,18 +178,19 @@ func NewConnPool(peers []string, dialFunc ConnPoolDialFunc) (*ConnPool, error) {
 			continue
 		}
 		data[peer] = append(data[peer], c)
+		goodPeers = append(goodPeers, peer)
 	}
 	if len(data) == 0 {
-		return nil, fmt.Errorf("no peers available")
+		return nil, nil, fmt.Errorf("no peers available")
 	}
 	pool := &ConnPool{
 		data:     data,
 		dialFunc: dialFunc,
 	}
-	return pool, nil
+	return pool, goodPeers, nil
 }
 
-func (p *ConnPool) Get(addr string) (*SeederClient, error) {
+func (p *ConnPool) Get(id string, addr string) (*SeederClient, error) {
 	p.mu.Lock()
 	clients, ok := p.data[addr]
 	if ok && len(clients) != 0 {
@@ -218,6 +210,10 @@ func (p *ConnPool) Get(addr string) (*SeederClient, error) {
 			log.Println(err)
 			return nil, err
 		}
+		if err := client.Connect(id); err != nil {
+			client.Close()
+			return nil, err
+		}
 		return client, nil
 	}
 }
@@ -226,6 +222,37 @@ func (p *ConnPool) Put(addr string, client *SeederClient) {
 	p.mu.Lock()
 	p.data[addr] = append(p.data[addr], client)
 	p.mu.Unlock()
+}
+
+func (p *ConnPool) Len() int {
+	p.mu.RLock()
+	l := len(p.data)
+	p.mu.RUnlock()
+	return l
+}
+
+func (p *ConnPool) Connect(id string) error {
+	p.mu.RLock()
+	for _, clients := range p.data {
+		for _, client := range clients {
+			if err := client.Connect(id); err != nil {
+				// TODO: remove conn if connect fails
+				return err
+			}
+		}
+	}
+	p.mu.RUnlock()
+	return nil
+}
+
+func (p *ConnPool) Disconnect() {
+	p.mu.RLock()
+	for _, clients := range p.data {
+		for _, client := range clients {
+			client.Disconnect()
+		}
+	}
+	p.mu.RUnlock()
 }
 
 func (p *ConnPool) Release() {
