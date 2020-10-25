@@ -83,7 +83,9 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	defer f.Close()
 	d.f = f
 
-	d.pb = pb.New(int(ifile.Size))
+	d.pb = pb.New64(ifile.Size)
+	d.pb.Set(pb.Bytes, true)
+	d.pb.Set(pb.SIBytesPrefix, true)
 	d.pb.Start()
 	defer d.pb.Finish()
 
