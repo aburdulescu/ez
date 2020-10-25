@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"sync"
@@ -73,6 +72,10 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 		log.Println(err)
 		return err
 	}
+	if err := f.Truncate(ifile.Size); err != nil {
+		log.Println(err)
+		return err
+	}
 	defer f.Close()
 	d.f = f
 	nchunks := uint64(ifile.Size / chunks.CHUNK_SIZE)
@@ -113,7 +116,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 	peerCount := 0
 	result := make(chan Chunk)
 	for index := start; index < end; index++ {
-		peerIndex := peerCount % d.connPool.Len()
+		peerIndex := peerCount % len(d.peers)
 		peer := d.peers[peerIndex]
 		client, err := d.connPool.Get(d.id, peer)
 		if err != nil {
@@ -123,25 +126,17 @@ func (d Downloader) dwChunks(start, end uint64) error {
 		go d.fetch(peer, client, index, result)
 		peerCount++
 	}
-	chunks := make([]Chunk, end-start)
-	if start == 0 {
-		for i := uint64(0); i < (end - start); i++ {
-			chunk := <-result
-			chunks[chunk.index] = chunk
-		}
-	} else {
-		for i := uint64(0); i < (end - start); i++ {
-			chunk := <-result
-			chunks[chunk.index%start] = chunk
-		}
-	}
-	for _, chunk := range chunks {
+	for i := uint64(0); i < (end - start); i++ {
+		chunk := <-result
 		if chunk.err != nil {
 			log.Println(chunk.err)
-			return chunk.err
+			// TODO: retry chunk download
+			continue
 		}
-		if _, err := io.Copy(d.f, chunk.buf); err != nil {
-			log.Println(err)
+		off := int64(chunk.index * chunks.CHUNK_SIZE)
+		n, err := d.f.WriteAt(chunk.buf.Bytes(), off)
+		if err != nil {
+			log.Println(err, n)
 			return err
 		}
 		ReleaseChunk(chunk.buf.Bytes())
