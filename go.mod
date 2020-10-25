@@ -9,6 +9,7 @@ require (
 	github.com/aburdulescu/ez/ezs v0.0.0-20201011111155-0513dc0f5dc4
 	github.com/aburdulescu/ez/ezt v0.0.0-20201011111155-0513dc0f5dc4
 	github.com/aburdulescu/ez/hash v0.0.0-20201011111155-0513dc0f5dc4
+	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/dgraph-io/badger/v2 v2.2007.2
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
