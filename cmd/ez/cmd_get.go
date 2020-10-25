@@ -10,7 +10,8 @@ import (
 	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/spf13/cobra"
-	// pb "github.com/cheggaaa/pb/v3" // TODO: use it for progress bar
+
+	pb "github.com/cheggaaa/pb/v3"
 )
 
 func onGet(cmd *cobra.Command, args []string) error {
@@ -43,6 +44,7 @@ type Downloader struct {
 	f        *os.File
 	connPool *ConnPool
 	peers    []string
+	pb       *pb.ProgressBar
 }
 
 type Chunk struct {
@@ -53,6 +55,7 @@ type Chunk struct {
 
 func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	d.id = id
+
 	connPool, goodPeers, err := NewConnPool(peers, DialSeederClient)
 	if err != nil {
 		return err
@@ -67,6 +70,7 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 		return err
 	}
 	defer d.connPool.Disconnect()
+
 	f, err := os.Create(ifile.Name)
 	if err != nil {
 		log.Println(err)
@@ -78,10 +82,16 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	}
 	defer f.Close()
 	d.f = f
+
+	d.pb = pb.New(int(ifile.Size))
+	d.pb.Start()
+	defer d.pb.Finish()
+
 	nchunks := uint64(ifile.Size / chunks.CHUNK_SIZE)
 	if ifile.Size%chunks.CHUNK_SIZE != 0 {
 		nchunks++
 	}
+
 	n := nchunks / MAX_CHUNKS
 	for i := uint64(0); i < n; i++ {
 		start := i * MAX_CHUNKS
@@ -91,16 +101,20 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 			return err
 		}
 	}
+
 	remainder := nchunks % MAX_CHUNKS
 	if remainder == 0 {
 		return nil
 	}
+
 	start := nchunks - remainder
 	end := start + remainder
+
 	if err := d.dwChunks(start, end); err != nil {
 		log.Println(err)
 		return err
 	}
+
 	fi, err := f.Stat()
 	if err != nil {
 		log.Println(err)
@@ -109,6 +123,7 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	if fi.Size() != ifile.Size {
 		return fmt.Errorf("downloaded file has different size than expected: expected %d, got %d", ifile.Size, fi.Size())
 	}
+
 	return nil
 }
 
@@ -139,6 +154,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 			log.Println(err, n)
 			return err
 		}
+		d.pb.Add(n)
 		ReleaseChunk(chunk.buf.Bytes())
 	}
 	return nil
