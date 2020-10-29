@@ -32,7 +32,7 @@ func Unmarshal(b []byte) (Msg, error) {
 		id := string(payload)
 		return Connect{id}, nil
 	case DISCONNECT:
-		return Disonnect{}, nil
+		return Disconnect{}, nil
 	case GETCHUNK:
 		if len(payload) == 0 {
 			return nil, ErrEmptyPayload

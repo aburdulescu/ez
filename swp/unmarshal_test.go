@@ -17,7 +17,7 @@ func TestUnmarshal(t *testing.T) {
 		input := []byte{255}
 		_, err := Unmarshal(input)
 		if err != ErrUnknownMsg {
-			t.Fatalf("expected %v, got %v", err, ErrUnknownMsg)
+			t.Fatalf("expected %v, got %v", ErrUnknownMsg, err)
 		}
 	})
 	t.Run("Connect", func(t *testing.T) {
@@ -25,7 +25,7 @@ func TestUnmarshal(t *testing.T) {
 			input := []byte{byte(CONNECT)}
 			_, err := Unmarshal(input)
 			if err != ErrEmptyPayload {
-				t.Fatalf("expected %v, got %v", err, ErrEmptyPayload)
+				t.Fatalf("expected %v, got %v", ErrEmptyPayload, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {
@@ -47,23 +47,21 @@ func TestUnmarshal(t *testing.T) {
 		})
 	})
 	t.Run("Disconnect", func(t *testing.T) {
-		t.Run("Good", func(t *testing.T) {
-			input := []byte{byte(DISCONNECT)}
-			msg, err := Unmarshal(input)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if msg.Type() != DISCONNECT {
-				t.Fatal("msg type not DISCONNECT")
-			}
-		})
+		input := []byte{byte(DISCONNECT)}
+		msg, err := Unmarshal(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if msg.Type() != DISCONNECT {
+			t.Fatal("msg type not DISCONNECT")
+		}
 	})
 	t.Run("Getchunk", func(t *testing.T) {
 		t.Run("EmptyPayload", func(t *testing.T) {
 			input := []byte{byte(GETCHUNK)}
 			_, err := Unmarshal(input)
 			if err != ErrEmptyPayload {
-				t.Fatalf("expected %v, got %v", err, ErrEmptyPayload)
+				t.Fatalf("expected %v, got %v", ErrEmptyPayload, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {
@@ -87,23 +85,21 @@ func TestUnmarshal(t *testing.T) {
 		})
 	})
 	t.Run("Ack", func(t *testing.T) {
-		t.Run("Good", func(t *testing.T) {
-			input := []byte{byte(ACK)}
-			msg, err := Unmarshal(input)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if msg.Type() != ACK {
-				t.Fatal("msg type not ACK")
-			}
-		})
+		input := []byte{byte(ACK)}
+		msg, err := Unmarshal(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if msg.Type() != ACK {
+			t.Fatal("msg type not ACK")
+		}
 	})
 	t.Run("Piece", func(t *testing.T) {
 		t.Run("EmptyPayload", func(t *testing.T) {
 			input := []byte{byte(PIECE)}
 			_, err := Unmarshal(input)
 			if err != ErrEmptyPayload {
-				t.Fatalf("expected %v, got %v", err, ErrEmptyPayload)
+				t.Fatalf("expected %v, got %v", ErrEmptyPayload, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {
@@ -129,14 +125,14 @@ func TestUnmarshal(t *testing.T) {
 			input := []byte{byte(CHUNKHASH), 0, 0}
 			_, err := Unmarshal(input)
 			if err != ErrPayloadTooSmall {
-				t.Fatalf("expected %v, got %v", err, ErrPayloadTooSmall)
+				t.Fatalf("expected %v, got %v", ErrPayloadTooSmall, err)
 			}
 		})
 		t.Run("MissingHash", func(t *testing.T) {
 			input := []byte{byte(CHUNKHASH), 0, 0, 0, 0, 0, 0, 0, 0}
 			_, err := Unmarshal(input)
 			if err != ErrEmptyPayload {
-				t.Fatalf("expected %v, got %v", err, ErrEmptyPayload)
+				t.Fatalf("expected %v, got %v", ErrEmptyPayload, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {

@@ -23,10 +23,10 @@ func (r Connect) Type() MsgType {
 	return CONNECT
 }
 
-type Disonnect struct {
+type Disconnect struct {
 }
 
-func (r Disonnect) Type() MsgType {
+func (r Disconnect) Type() MsgType {
 	return DISCONNECT
 }
 
