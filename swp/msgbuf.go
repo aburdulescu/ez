@@ -8,8 +8,8 @@ import (
 	"github.com/aburdulescu/ez/chunks"
 )
 
-const MSG_HEADER_SIZE = 1
-const POOL_BUF_SIZE = chunks.PIECE_SIZE + MSG_HEADER_SIZE
+const EXTRA_MEMORY = 16
+const POOL_BUF_SIZE = chunks.PIECE_SIZE + EXTRA_MEMORY
 
 var msgbufPool = sync.Pool{
 	New: func() interface{} {
