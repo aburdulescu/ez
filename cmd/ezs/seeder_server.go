@@ -9,9 +9,8 @@ import (
 	"sync"
 
 	"github.com/aburdulescu/ez/chunks"
-	"github.com/aburdulescu/ez/ezs"
 	"github.com/aburdulescu/ez/ezt"
-	"google.golang.org/protobuf/proto"
+	"github.com/aburdulescu/ez/swp"
 )
 
 var chunkPool = sync.Pool{
@@ -63,7 +62,7 @@ func (h SeederServerReqHandler) run() {
 	defer h.conn.Close()
 	remAddr := h.conn.RemoteAddr().String()
 	for {
-		req, err := h.Recv()
+		msg, cleanup, err := swp.Recv(h.conn)
 		if err == io.EOF {
 			return
 		}
@@ -71,55 +70,30 @@ func (h SeederServerReqHandler) run() {
 			log.Printf("%s: error: %v\n", remAddr, err)
 			continue
 		}
-		reqType := req.GetType()
-		switch reqType {
-		case ezs.RequestType_CONNECT:
-			log.Printf("%s: CONNECT %v\n", remAddr, req.GetId())
-			if err := h.handleConnect(req.GetId()); err != nil {
+		msgType := msg.Type()
+		switch msgType {
+		case swp.CONNECT:
+			req := msg.(swp.Connect)
+			log.Printf("%s: CONNECT %v\n", remAddr, req.Id)
+			if err := h.handleConnect(req.Id); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
-		case ezs.RequestType_DISCONNECT:
+		case swp.DISCONNECT:
 			log.Printf("%s: DISCONNECT\n", remAddr)
 			if err := h.handleDisconnect(); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
-		case ezs.RequestType_GETCHUNK:
-			log.Printf("%s: GETCHUNK %v\n", remAddr, req.GetIndex())
-			if err := h.handleGetchunk(req.GetIndex()); err != nil {
+		case swp.GETCHUNK:
+			req := msg.(swp.Getchunk)
+			log.Printf("%s: GETCHUNK %v\n", remAddr, req.Index)
+			if err := h.handleGetchunk(req.Index); err != nil {
 				log.Printf("%s: error: %v\n", remAddr, err)
 			}
 		default:
-			log.Printf("%s: error: unknown request type %v\n", remAddr, reqType)
+			log.Printf("%s: error: unknown request type %v\n", remAddr, msgType)
 		}
+		cleanup()
 	}
-}
-
-func (h SeederServerReqHandler) Send(rsp ezs.Response) error {
-	b, err := proto.Marshal(&rsp)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	if err := ezs.Write(h.conn, b); err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (h SeederServerReqHandler) Recv() (*ezs.Request, error) {
-	b, err := ezs.Read(h.conn)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	req := &ezs.Request{}
-	if err := proto.Unmarshal(b, req); err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	ezs.ReleaseMsg(b)
-	return req, nil
 }
 
 func (h *SeederServerReqHandler) handleConnect(id string) error {
@@ -136,11 +110,7 @@ func (h *SeederServerReqHandler) handleConnect(id string) error {
 		return err
 	}
 	h.f = f
-	rsp := ezs.Response{
-		Type:    ezs.ResponseType_ACK,
-		Payload: &ezs.Response_Dummy{},
-	}
-	if err := h.Send(rsp); err != nil {
+	if err := swp.Send(h.conn, swp.Ack{}); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -152,11 +122,7 @@ func (h *SeederServerReqHandler) handleDisconnect() error {
 	h.ifile = nil
 	h.f.Close()
 	h.f = nil
-	rsp := ezs.Response{
-		Type:    ezs.ResponseType_ACK,
-		Payload: &ezs.Response_Dummy{},
-	}
-	if err := h.Send(rsp); err != nil {
+	if err := swp.Send(h.conn, swp.Ack{}); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -182,29 +148,18 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		npieces++
 		remainder = 1
 	}
-	rsp := ezs.Response{
-		Type: ezs.ResponseType_CHUNKHASH,
-		Payload: &ezs.Response_Chunkhash{
-			&ezs.Chunkhash{
-				Hash:    []byte(chunkHashes[index]),
-				Npieces: npieces,
-			},
-		},
+	rsp := swp.Chunkhash{
+		NPieces: npieces,
+		Hash:    []byte(chunkHashes[index]),
 	}
-	if err := h.Send(rsp); err != nil {
+	if err := swp.Send(h.conn, rsp); err != nil {
 		log.Println(err)
 		return err
 	}
 	i := uint64(0)
 	for ; i < npieces-remainder; i++ {
 		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
-		rsp := ezs.Piece{Piece: piece}
-		b, err := proto.Marshal(&rsp)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := ezs.Write(h.conn, b); err != nil {
+		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
 			log.Println(err)
 			return err
 		}
@@ -212,13 +167,7 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 	if remainder != 0 {
 		log.Println(i * chunks.PIECE_SIZE)
 		piece := chunk[i*chunks.PIECE_SIZE:]
-		rsp := &ezs.Piece{Piece: piece}
-		b, err := proto.Marshal(rsp)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if err := ezs.Write(h.conn, b); err != nil {
+		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
 			log.Println(err)
 			return err
 		}

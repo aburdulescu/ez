@@ -1,4 +1,4 @@
-package ezs
+package swp
 
 import (
 	"io"
@@ -8,27 +8,27 @@ import (
 	"github.com/aburdulescu/ez/chunks"
 )
 
-const EXTRA_PB_MSG_SIZE = 10
-const POOL_BUF_SIZE = chunks.PIECE_SIZE + EXTRA_PB_MSG_SIZE
+const MSG_HEADER_SIZE = 1
+const POOL_BUF_SIZE = chunks.PIECE_SIZE + MSG_HEADER_SIZE
 
-var msgPool = sync.Pool{
+var msgbufPool = sync.Pool{
 	New: func() interface{} {
 		return make([]byte, POOL_BUF_SIZE)
 	},
 }
 
-func AllocMsg(size int) MsgBuffer {
+func AllocMsgbuf(size int) MsgBuffer {
 	if size >= chunks.PIECE_SIZE {
-		b := msgPool.Get().([]byte)
+		b := msgbufPool.Get().([]byte)
 		return MsgBuffer{b[:size]}
 	} else {
 		return NewMsgBuffer(size)
 	}
 }
 
-func ReleaseMsg(b []byte) {
+func ReleaseMsgbuf(b []byte) {
 	if len(b) >= chunks.PIECE_SIZE {
-		msgPool.Put(b[:POOL_BUF_SIZE])
+		msgbufPool.Put(b[:POOL_BUF_SIZE])
 	}
 }
 
