@@ -9,6 +9,7 @@ import (
 func main() {
 	// defer profile.Start(profile.ProfilePath("."), profile.CPUProfile).Stop()
 	// defer profile.Start(profile.ProfilePath("."), profile.MemProfile, profile.MemProfileRate(1)).Stop()
+	// defer profile.Start(profile.ProfilePath("."), profile.TraceProfile).Stop()
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
