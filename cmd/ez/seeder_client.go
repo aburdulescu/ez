@@ -8,9 +8,8 @@ import (
 	"sync"
 
 	"github.com/aburdulescu/ez/chunks"
-	"github.com/aburdulescu/ez/ezs"
 	"github.com/aburdulescu/ez/hash"
-	"google.golang.org/protobuf/proto"
+	"github.com/aburdulescu/ez/swp"
 )
 
 var chunkPool = sync.Pool{
@@ -52,21 +51,18 @@ func (c SeederClient) Connect(id string) error {
 	if c.conn == nil {
 		return fmt.Errorf("client was not initialized properly")
 	}
-	req := ezs.Request{
-		Type:    ezs.RequestType_CONNECT,
-		Payload: &ezs.Request_Id{id},
-	}
-	if err := c.Send(req); err != nil {
+	if err := swp.Send(c.conn, swp.Connect{id}); err != nil {
 		log.Println(err)
 		return err
 	}
-	rsp, err := c.Recv()
+	rsp, cleanup, err := swp.Recv(c.conn)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	rspType := rsp.GetType()
-	if rspType != ezs.ResponseType_ACK {
+	defer cleanup()
+	rspType := rsp.Type()
+	if rspType != swp.ACK {
 		return fmt.Errorf("unexpected response: %s", rspType)
 	}
 	return nil
@@ -76,21 +72,18 @@ func (c SeederClient) Disconnect() error {
 	if c.conn == nil {
 		return fmt.Errorf("client was not initialized properly")
 	}
-	req := ezs.Request{
-		Type:    ezs.RequestType_DISCONNECT,
-		Payload: &ezs.Request_Dummy{},
-	}
-	if err := c.Send(req); err != nil {
+	if err := swp.Send(c.conn, swp.Disconnect{}); err != nil {
 		log.Println(err)
 		return err
 	}
-	rsp, err := c.Recv()
+	rsp, cleanup, err := swp.Recv(c.conn)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	rspType := rsp.GetType()
-	if rspType != ezs.ResponseType_ACK {
+	defer cleanup()
+	rspType := rsp.Type()
+	if rspType != swp.DISCONNECT {
 		return fmt.Errorf("unexpected response: %s", rspType)
 	}
 	return nil
@@ -100,81 +93,41 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	if c.conn == nil {
 		return nil, fmt.Errorf("client was not initialized properly")
 	}
-	req := ezs.Request{
-		Type:    ezs.RequestType_GETCHUNK,
-		Payload: &ezs.Request_Index{index},
-	}
-	if err := c.Send(req); err != nil {
+	if err := swp.Send(c.conn, swp.Getchunk{index}); err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	rsp, err := c.Recv()
+	rsp, cleanup, err := swp.Recv(c.conn)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	rspType := rsp.GetType()
-	if rspType != ezs.ResponseType_CHUNKHASH {
+	defer cleanup()
+	rspType := rsp.Type()
+	if rspType != swp.CHUNKHASH {
 		return nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
-	chunkhashMsg := rsp.GetChunkhash()
-	npieces := chunkhashMsg.GetNpieces()
+	chunkhashMsg := rsp.(swp.Chunkhash)
+	npieces := chunkhashMsg.NPieces
 	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
-		b, err := ezs.Read(c.conn)
+		rsp, cleanup, err := swp.Recv(c.conn)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
-		rsp := ezs.Piece{}
-		if err := proto.Unmarshal(b, &rsp); err != nil {
-			log.Println(err)
+		pieceMsg := rsp.(swp.Piece)
+		if _, err := buf.Write(pieceMsg.Piece); err != nil {
+			cleanup()
 			return nil, err
 		}
-		if _, err := buf.Write(rsp.GetPiece()); err != nil {
-			return nil, err
-		}
-		ezs.ReleaseMsg(b)
+		cleanup()
 	}
 	calcChunkHash := hash.FromChunk(buf.Bytes())
-	chunkHash := hash.Hash(chunkhashMsg.GetHash())
+	chunkHash := hash.Hash(chunkhashMsg.Hash)
 	if !calcChunkHash.Equals(chunkHash) {
 		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
 		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", index)
 	}
 	return buf, nil
-}
-
-func (c SeederClient) Send(req ezs.Request) error {
-	if c.conn == nil {
-		return fmt.Errorf("client was not initialized properly")
-	}
-	b, err := proto.Marshal(&req)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	if err := ezs.Write(c.conn, b); err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
-func (c SeederClient) Recv() (*ezs.Response, error) {
-	if c.conn == nil {
-		return nil, fmt.Errorf("client was not initialized properly")
-	}
-	b, err := ezs.Read(c.conn)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	rsp := &ezs.Response{}
-	if err := proto.Unmarshal(b, rsp); err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	ezs.ReleaseMsg(b)
-	return rsp, nil
 }
