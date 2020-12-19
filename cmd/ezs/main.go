@@ -45,12 +45,6 @@ func run() error {
 		return err
 	}
 
-	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:22203", db)
-	if err != nil {
-		return err
-	}
-	go trackerProbeServer.ListenAndServe()
-
 	seederServer, err := NewSeederServer(db)
 	if err != nil {
 		return err
@@ -58,6 +52,12 @@ func run() error {
 	go seederServer.ListenAndServe()
 
 	go NewLocalServer(db).Run()
+
+	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:22203", db)
+	if err != nil {
+		return err
+	}
+	go trackerProbeServer.ListenAndServe()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
