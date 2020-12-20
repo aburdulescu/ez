@@ -50,7 +50,7 @@ build_seeders() {
     do
         ip_suffix=$((i+1))
 
-        seedAddr=$subnet_ip_prefix$ip_suffix":22201"
+        seedAddr=$subnet_ip_prefix$ip_suffix
 
         rm -f seeder-entrypoint.sh
 
