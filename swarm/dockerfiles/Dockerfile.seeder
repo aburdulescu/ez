@@ -1,6 +1,3 @@
 FROM ez_base
-
-COPY scripts/addFile.sh /usr/local/bin/addFile.sh
 COPY seeder-entrypoint.sh /entrypoint.sh
-
 ENTRYPOINT ["/entrypoint.sh"]
