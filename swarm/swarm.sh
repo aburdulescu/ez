@@ -3,27 +3,33 @@
 set -e
 
 cfg=$(cat swarm.json)
+
 subnet_name=$(echo $cfg | jq -r ".subnet.name")
 subnet_ip=$(echo $cfg | jq -r ".subnet.ip")
-num_seeders=$(echo $cfg | jq -r ".numSeeders")
+subnet_mask=$(echo $cfg | jq -r ".subnet.mask")
 subnet_ip_prefix=$(echo $subnet_ip|cut -d "." -f "1,2,3")"."
+
+num_seeders=$(echo $cfg | jq -r ".numSeeders")
+
+seeder_dbpath=$(echo $cfg | jq -r ".seederDbPath")
+
+files=$(echo $cfg | jq -r ".files")
+
 tracker_ip=$subnet_ip_prefix"254"
-files_dir=/tmp/ez/files
+
+files_dir=$(pwd)/files
 swarm_dir=$(pwd)
 
-build() {
-    subnet_mask=$(echo $cfg | jq -r ".subnet.mask")
-    seeder_dbpath=$(echo $cfg | jq -r ".seederDbPath")
-    files=$(echo $cfg | jq -r ".files")
-    tracker_url="http://"$tracker_ip":23230/"
 
-    ezl_json_fmt="{\"trackerUrl\":\"%s\",\"seederAddr\":\"%s\",\"dbPath\":\"%s\"}"
-    ezs_json_fmt="{\"listenAddr\":\"%s\",\"dbPath\":\"%s\"}"
-
+build_subnet() {
     docker network inspect $subnet_name 1>>/dev/null 2>>/dev/null || docker network create --subnet "$subnet_ip$subnet_mask" $subnet_name
+}
 
+build_tracker() {
     docker build -t ez_tracker -f dockerfiles/Dockerfile.tracker .
+}
 
+build_files() {
     rm -rf $files_dir
     mkdir -p $files_dir
     cd $files_dir
@@ -35,24 +41,34 @@ build() {
         $swarm_dir/scripts/mkf.sh $name $size
     done
     cd -
+}
 
-    rm -f seeder-entrypoint.sh
-    echo $cfg | tpl -t templates/seeder-entrypoint.sh > seeder-entrypoint.sh
-    chmod +x seeder-entrypoint.sh
+build_seeders() {
+    seeder_entrypoint_fmt="{\"files\":"$files",\"seederDbPath\":\"%s\",\"seedAddr\":\"%s\",\"trackerAddr\":\"%s\"}"
 
-    config_dir=config
-    rm -rf $config_dir
-    mkdir -p $config_dir
     for i in $(seq 1 $num_seeders)
     do
         ip_suffix=$((i+1))
-        printf $ezl_json_fmt $tracker_url $subnet_ip_prefix$ip_suffix":23231" $seeder_dbpath | tpl -t templates/ezl.json.tpl > $config_dir/ezl.json
-        printf $ezs_json_fmt ":23231" $seeder_dbpath | tpl -t templates/ezs.json.tpl > $config_dir/ezs.json
+
+        seedAddr=$subnet_ip_prefix$ip_suffix
+
+        rm -f seeder-entrypoint.sh
+
+        printf "$seeder_entrypoint_fmt" $seeder_dbpath $seedAddr $tracker_ip | tpl -t templates/seeder-entrypoint.sh.tpl > seeder-entrypoint.sh
+
+        chmod +x seeder-entrypoint.sh
+
         docker build -t ez_seeder_$i -f dockerfiles/Dockerfile.seeder .
     done
 
-    rm -rf $config_dir
     rm seeder-entrypoint.sh
+}
+
+build() {
+    build_subnet
+    build_tracker
+    build_files
+    build_seeders
 }
 
 run() {
@@ -62,7 +78,7 @@ run() {
     docker run \
            --rm \
            -d \
-           -v $files_dir:/go-ez/files \
+           -v $files_dir:/ez/files \
            --network $subnet_name \
            --ip $ip \
            --name $img \

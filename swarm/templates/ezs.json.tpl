@@ -1,4 +1,0 @@
-{
-    "listenAddr": "{{.listenAddr}}",
-    "dbPath": "{{.dbPath}}"
-}

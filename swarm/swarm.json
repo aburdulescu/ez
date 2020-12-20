@@ -16,12 +16,8 @@
             "size": 100
         },
         {
-            "name": "f1GB",
-            "size": 1024
-        },
-        {
-            "name": "f10GB",
-            "size": 10240
+            "name": "f500MB",
+            "size": 500
         }
     ]
 }
