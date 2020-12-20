@@ -1,3 +1,2 @@
 FROM ez_base
-
-ENTRYPOINT ["/go-ez/bin/ezt"]
+ENTRYPOINT ["ezt"]
