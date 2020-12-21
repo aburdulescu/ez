@@ -9,10 +9,10 @@ import (
 	"github.com/aburdulescu/ez/hash"
 )
 
-const PIECE_SIZE = 8 << 10
-const CHUNK_SIZE = PIECE_SIZE << 10
+const PIECE_SIZE = 8 << 10          // TODO: move to cmn package
+const CHUNK_SIZE = PIECE_SIZE << 10 // TODO: move to cmn package
 
-func FromFile(f *os.File, size int64) ([]hash.Checksum, error) {
+func FromFile(f *os.File, size int64) ([]hash.Checksum, error) { // TODO: move to cmd/ezs
 	remainder := size % CHUNK_SIZE
 	leftover := int64(0)
 	if remainder != 0 {

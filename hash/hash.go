@@ -8,7 +8,7 @@ import (
 	"github.com/zeebo/xxh3"
 )
 
-type Checksum uint64
+type Checksum uint64 // TODO: move to separate package or rename this one or to cmn package
 
 const ChecksumSize = 8
 
@@ -18,7 +18,7 @@ func NewChecksum(data []byte) Checksum {
 
 const IDAlg = "sha256"
 
-func NewID(checksums []Checksum) string {
+func NewID(checksums []Checksum) string { // TODO: move to cmd/ezs
 	h := sha256.New()
 	b := make([]byte, ChecksumSize)
 	for i := range checksums {
