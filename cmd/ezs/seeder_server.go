@@ -130,7 +130,7 @@ func (h *SeederServerReqHandler) handleDisconnect() error {
 }
 
 func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
-	chunkHashes, err := h.db.GetChunkHashes(string(h.id))
+	checksums, err := h.db.GetChecksums(h.id)
 	if err != nil {
 		log.Println(err)
 		return err
@@ -148,9 +148,9 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		npieces++
 		remainder = 1
 	}
-	rsp := swp.Chunkhash{
-		NPieces: npieces,
-		Hash:    []byte(chunkHashes[index]),
+	rsp := swp.Chunkinfo{
+		NPieces:  npieces,
+		Checksum: uint64(checksums[index]),
 	}
 	if err := swp.Send(h.conn, rsp); err != nil {
 		log.Println(err)

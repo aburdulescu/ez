@@ -12,14 +12,14 @@ import (
 const PIECE_SIZE = 8 << 10
 const CHUNK_SIZE = PIECE_SIZE << 10
 
-func FromFile(f *os.File, size int64) ([]hash.Hash, error) {
+func FromFile(f *os.File, size int64) ([]hash.Checksum, error) {
 	remainder := size % CHUNK_SIZE
 	leftover := int64(0)
 	if remainder != 0 {
 		leftover = int64(1)
 	}
 	nchunks := int64(math.Ceil(float64(size) / float64(CHUNK_SIZE)))
-	chunks := make([]hash.Hash, nchunks)
+	checksums := make([]hash.Checksum, nchunks)
 	buf := new(bytes.Buffer)
 	buf.Grow(CHUNK_SIZE)
 	for i := int64(0); i < nchunks-leftover; i++ {
@@ -27,7 +27,7 @@ func FromFile(f *os.File, size int64) ([]hash.Hash, error) {
 		if err != nil {
 			return nil, err
 		}
-		chunks[i] = hash.FromChunk(buf.Bytes())
+		checksums[i] = hash.NewChecksum(buf.Bytes())
 		buf.Reset()
 	}
 	if leftover == 1 {
@@ -35,8 +35,8 @@ func FromFile(f *os.File, size int64) ([]hash.Hash, error) {
 		if err != nil {
 			return nil, err
 		}
-		chunks[len(chunks)-1] = hash.FromChunk(buf.Bytes())
+		checksums[len(checksums)-1] = hash.NewChecksum(buf.Bytes())
 		buf.Reset()
 	}
-	return chunks, nil
+	return checksums, nil
 }

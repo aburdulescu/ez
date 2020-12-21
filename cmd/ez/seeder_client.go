@@ -104,10 +104,10 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	}
 	defer cleanup()
 	rspType := rsp.Type()
-	if rspType != swp.CHUNKHASH {
+	if rspType != swp.CHUNKINFO {
 		return nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
-	chunkhashMsg := rsp.(swp.Chunkhash)
+	chunkhashMsg := rsp.(swp.Chunkinfo)
 	npieces := chunkhashMsg.NPieces
 	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
@@ -123,11 +123,11 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 		}
 		cleanup()
 	}
-	calcChunkHash := hash.FromChunk(buf.Bytes())
-	chunkHash := hash.Hash(chunkhashMsg.Hash)
-	if !calcChunkHash.Equals(chunkHash) {
+	calcChecksum := hash.NewChecksum(buf.Bytes())
+	checksum := hash.Checksum(chunkhashMsg.Checksum)
+	if calcChecksum != checksum {
 		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
-		return nil, fmt.Errorf("hash of chunk %d differs from hash provided by peer", index)
+		return nil, fmt.Errorf("checksum of chunk %d differs from checksum provided by peer", index)
 	}
 	return buf, nil
 }

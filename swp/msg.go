@@ -7,7 +7,7 @@ const (
 	DISCONNECT
 	GETCHUNK
 	ACK
-	CHUNKHASH
+	CHUNKINFO
 	PIECE
 )
 
@@ -21,8 +21,8 @@ func (t MsgType) String() string {
 		return "GETCHUNK"
 	case ACK:
 		return "ACK"
-	case CHUNKHASH:
-		return "CHUNKHASH"
+	case CHUNKINFO:
+		return "CHUNKINFO"
 	case PIECE:
 		return "PIECE"
 	default:
@@ -83,17 +83,17 @@ func (r Ack) Size() int {
 	return headerSize
 }
 
-type Chunkhash struct {
-	NPieces uint64
-	Hash    []byte
+type Chunkinfo struct {
+	NPieces  uint64
+	Checksum uint64
 }
 
-func (r Chunkhash) Type() MsgType {
-	return CHUNKHASH
+func (r Chunkinfo) Type() MsgType {
+	return CHUNKINFO
 }
 
-func (r Chunkhash) Size() int {
-	return headerSize + 8 + len(r.Hash)
+func (r Chunkinfo) Size() int {
+	return headerSize + 8 + 8
 }
 
 type Piece struct {

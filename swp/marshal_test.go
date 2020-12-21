@@ -8,6 +8,7 @@ import (
 type UnknownMsg struct{}
 
 func (r UnknownMsg) Type() MsgType { return MsgType(255) }
+func (r UnknownMsg) Size() int     { return -1 }
 
 func TestMarshal(t *testing.T) {
 	t.Run("EmptyBuffer", func(t *testing.T) {
@@ -110,37 +111,37 @@ func TestMarshal(t *testing.T) {
 			}
 		})
 	})
-	t.Run("Chunkhash", func(t *testing.T) {
+	t.Run("Chunkinfo", func(t *testing.T) {
 		t.Run("BufferTooSmall1", func(t *testing.T) {
 			b := make([]byte, 1)
-			if err := Marshal(Chunkhash{42, nil}, b); err != ErrBufferTooSmall {
+			if err := Marshal(Chunkinfo{42, 0}, b); err != ErrBufferTooSmall {
 				t.Fatalf("expected %v, got %v", ErrBufferTooSmall, err)
 			}
 		})
 		t.Run("BufferTooSmall2", func(t *testing.T) {
 			b := make([]byte, 1+8)
-			if err := Marshal(Chunkhash{42, []byte{0, 1, 2, 3}}, b); err != ErrBufferTooSmall {
+			if err := Marshal(Chunkinfo{42, 1234}, b); err != ErrBufferTooSmall {
 				t.Fatalf("expected %v, got %v", ErrBufferTooSmall, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {
 			var expectedNPieces uint64 = 42
-			expectedHash := []byte{0, 1, 2, 3}
-			b := make([]byte, 1+8+len(expectedHash))
-			if err := Marshal(Chunkhash{expectedNPieces, expectedHash}, b); err != nil {
+			var expectedChecksum uint64 = 1234
+			b := make([]byte, 1+8+8)
+			if err := Marshal(Chunkinfo{expectedNPieces, expectedChecksum}, b); err != nil {
 				t.Fatal(err)
 			}
 			msgType := MsgType(b[0])
-			if msgType != CHUNKHASH {
-				t.Fatal("msg type not CHUNKHASH")
+			if msgType != CHUNKINFO {
+				t.Fatal("msg type not CHUNKINFO")
 			}
 			npieces := binary.LittleEndian.Uint64(b[1:9])
 			if npieces != expectedNPieces {
 				t.Fatalf("expected %v, got %v", expectedNPieces, npieces)
 			}
-			hash := b[9:]
-			if err := compareByteSlice(hash, expectedHash); err != nil {
-				t.Fatal(err)
+			checksum := binary.LittleEndian.Uint64(b[9:])
+			if checksum != expectedChecksum {
+				t.Fatalf("expected %v, got %v", expectedChecksum, checksum)
 			}
 		})
 	})

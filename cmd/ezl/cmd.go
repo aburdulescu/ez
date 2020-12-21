@@ -56,7 +56,7 @@ func onLs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, f := range files {
-		fmt.Printf("%s\t%s/%s\t%d\n", f.Hash, f.IFile.Dir, f.IFile.Name, f.IFile.Size)
+		fmt.Printf("%s\t%s/%s\t%d\n", f.Id, f.IFile.Dir, f.IFile.Name, f.IFile.Size)
 	}
 	return nil
 }

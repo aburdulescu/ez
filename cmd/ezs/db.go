@@ -45,8 +45,8 @@ func (db DB) GetAll() ([]ezt.File, error) {
 					if err := json.Unmarshal(v, &i); err != nil {
 						return err
 					}
-					hash := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Hash: hash, IFile: i})
+					id := strings.Split(kstr, ".")[0]
+					files = append(files, ezt.File{Id: id, IFile: i})
 				}
 				return nil
 			})
@@ -59,8 +59,8 @@ func (db DB) GetAll() ([]ezt.File, error) {
 	return files, err
 }
 
-func (db DB) GetIFile(k string) (ezt.IFile, error) {
-	v, err := db.get(k + ".ifile")
+func (db DB) GetIFile(id string) (ezt.IFile, error) {
+	v, err := db.get(id + ".ifile")
 	if err != nil {
 		return ezt.IFile{}, err
 	}
@@ -71,43 +71,42 @@ func (db DB) GetIFile(k string) (ezt.IFile, error) {
 	return ifile, nil
 }
 
-func (db DB) GetChunkHashes(k string) ([]hash.Hash, error) {
-	v, err := db.get(k + ".chunks")
+func (db DB) GetChecksums(id string) ([]hash.Checksum, error) {
+	v, err := db.get(id + ".checksums")
 	if err != nil {
 		return nil, err
 	}
-	var hashes []hash.Hash
-	if err := json.Unmarshal(v, &hashes); err != nil {
+	var checksums []hash.Checksum
+	if err := json.Unmarshal(v, &checksums); err != nil {
 		return nil, err
 	}
-	return hashes, nil
+	return checksums, nil
 }
 
-func (db DB) Add(h hash.Hash, i ezt.IFile, chunks []hash.Hash) (string, error) {
+func (db DB) Add(id string, ifile ezt.IFile, checksums []hash.Checksum) error {
 	ifileBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(ifileBuf).Encode(&i); err != nil {
-		return "", err
+	if err := json.NewEncoder(ifileBuf).Encode(&ifile); err != nil {
+		return err
 	}
-	chunksBuf := new(bytes.Buffer)
-	if err := json.NewEncoder(chunksBuf).Encode(&chunks); err != nil {
-		return "", err
+	checksumsBuf := new(bytes.Buffer)
+	if err := json.NewEncoder(checksumsBuf).Encode(&checksums); err != nil {
+		return err
 	}
-	k := hash.ALG + "-" + h.String()
 	entries := []*badger.Entry{
-		badger.NewEntry([]byte(k+".ifile"), ifileBuf.Bytes()),
-		badger.NewEntry([]byte(k+".chunks"), chunksBuf.Bytes()),
+		badger.NewEntry([]byte(id+".ifile"), ifileBuf.Bytes()),
+		badger.NewEntry([]byte(id+".checksums"), checksumsBuf.Bytes()),
 	}
-	return k, db.add(entries)
+	return db.add(entries)
 }
 
-func (db DB) Delete(k string) error {
+func (db DB) Delete(id string) error {
 	err := db.db.Update(func(txn *badger.Txn) error {
-		ifileKey := k + ".ifile"
+		ifileKey := id + ".ifile"
 		if err := txn.Delete([]byte(ifileKey)); err != nil {
 			return err
 		}
-		chunksKey := k + ".chunks"
-		if err := txn.Delete([]byte(chunksKey)); err != nil {
+		checksumsKey := id + ".checksums"
+		if err := txn.Delete([]byte(checksumsKey)); err != nil {
 			return err
 		}
 		return nil
@@ -127,10 +126,10 @@ func (db DB) add(entries []*badger.Entry) error {
 	})
 }
 
-func (db DB) get(k string) ([]byte, error) {
+func (db DB) get(id string) ([]byte, error) {
 	var v []byte
 	err := db.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(k))
+		item, err := txn.Get([]byte(id))
 		if err != nil {
 			log.Println(err)
 			return err

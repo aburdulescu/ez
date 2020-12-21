@@ -20,7 +20,7 @@ func onLs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, f := range rsp.Files {
-		fmt.Printf("%s\t\t%s\t\t%d\n", f.Hash, f.Name, f.Size)
+		fmt.Printf("%s\t\t%s\t\t%d\n", f.Id, f.Name, f.Size)
 	}
 	return nil
 }

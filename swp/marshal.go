@@ -33,16 +33,16 @@ func Marshal(msg Msg, b []byte) error {
 		return nil
 	case ACK:
 		return nil
-	case CHUNKHASH:
+	case CHUNKINFO:
 		if len(b[1:]) < 8 {
 			return ErrBufferTooSmall
 		}
-		realMsg := msg.(Chunkhash)
+		realMsg := msg.(Chunkinfo)
 		binary.LittleEndian.PutUint64(b[1:9], realMsg.NPieces)
-		if len(b[9:]) < len(realMsg.Hash) {
+		if len(b[9:]) < 8 {
 			return ErrBufferTooSmall
 		}
-		copy(b[9:], realMsg.Hash)
+		binary.LittleEndian.PutUint64(b[9:], realMsg.Checksum)
 		return nil
 	case PIECE:
 		realMsg := msg.(Piece)

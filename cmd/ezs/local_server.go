@@ -81,22 +81,21 @@ func (s LocalServer) addFile(path string) error {
 	if err != nil {
 		return err
 	}
-	chunks, err := chunks.FromFile(f, i.Size)
+	checksums, err := chunks.FromFile(f, i.Size)
 	if err != nil {
 		return err
 	}
-	h := hash.FromChunkHashes(chunks)
+	id := hash.NewID(checksums)
 	if err != nil {
 		return err
 	}
-	id, err := s.db.Add(h, i, chunks)
-	if err != nil {
+	if err := s.db.Add(id, i, checksums); err != nil {
 		return err
 	}
 	trackerClient := ezt.NewClient(trackerURL)
 	req := ezt.AddRequest{
 		Files: []ezt.File{
-			ezt.File{Hash: id, IFile: i},
+			ezt.File{Id: id, IFile: i},
 		},
 		Addr: seedAddr,
 	}

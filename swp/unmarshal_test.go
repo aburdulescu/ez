@@ -120,43 +120,45 @@ func TestUnmarshal(t *testing.T) {
 			}
 		})
 	})
-	t.Run("Chunkhash", func(t *testing.T) {
+	t.Run("Chunkinfo", func(t *testing.T) {
 		t.Run("MissingNPieces", func(t *testing.T) {
-			input := []byte{byte(CHUNKHASH), 0, 0}
+			input := []byte{byte(CHUNKINFO), 0, 0}
 			_, err := Unmarshal(input)
 			if err != ErrPayloadTooSmall {
 				t.Fatalf("expected %v, got %v", ErrPayloadTooSmall, err)
 			}
 		})
-		t.Run("MissingHash", func(t *testing.T) {
-			input := []byte{byte(CHUNKHASH), 0, 0, 0, 0, 0, 0, 0, 0}
+		t.Run("MissingChecksum", func(t *testing.T) {
+			input := []byte{byte(CHUNKINFO), 0, 0, 0, 0, 0, 0, 0, 0}
 			_, err := Unmarshal(input)
-			if err != ErrEmptyPayload {
-				t.Fatalf("expected %v, got %v", ErrEmptyPayload, err)
+			if err != ErrPayloadTooSmall {
+				t.Fatalf("expected %v, got %v", ErrPayloadTooSmall, err)
 			}
 		})
 		t.Run("Good", func(t *testing.T) {
-			expectedHash := []byte{0, 1, 2, 3, 4, 5}
+			var expectedChecksum uint64 = 1234
+			checksumBuf := make([]byte, 8)
+			binary.LittleEndian.PutUint64(checksumBuf, expectedChecksum)
 			var expectedNPieces uint64 = 42
 			npiecesBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(npiecesBuf, 42)
+			binary.LittleEndian.PutUint64(npiecesBuf, expectedNPieces)
 			var input []byte
-			input = append(input, byte(CHUNKHASH))
+			input = append(input, byte(CHUNKINFO))
 			input = append(input, npiecesBuf...)
-			input = append(input, expectedHash...)
+			input = append(input, checksumBuf...)
 			msg, err := Unmarshal(input)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if msg.Type() != CHUNKHASH {
-				t.Fatal("msg type not CHUNKHASH")
+			if msg.Type() != CHUNKINFO {
+				t.Fatal("msg type not CHUNKINFO")
 			}
-			realMsg := msg.(Chunkhash)
+			realMsg := msg.(Chunkinfo)
 			if realMsg.NPieces != expectedNPieces {
 				t.Fatalf("expected %v, got %v", expectedNPieces, realMsg.NPieces)
 			}
-			if err := compareByteSlice(realMsg.Hash, expectedHash); err != nil {
-				t.Fatal(err)
+			if realMsg.Checksum != expectedChecksum {
+				t.Fatalf("expected %v, got %v", expectedChecksum, realMsg.Checksum)
 			}
 		})
 	})
