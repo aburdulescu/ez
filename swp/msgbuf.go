@@ -5,11 +5,11 @@ import (
 	"log"
 	"sync"
 
-	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/cmn"
 )
 
 const EXTRA_MEMORY = 16
-const POOL_BUF_SIZE = chunks.PIECE_SIZE + EXTRA_MEMORY
+const POOL_BUF_SIZE = cmn.PieceSize + EXTRA_MEMORY
 
 var msgbufPool = sync.Pool{
 	New: func() interface{} {
@@ -18,7 +18,7 @@ var msgbufPool = sync.Pool{
 }
 
 func AllocMsgbuf(size int) MsgBuffer {
-	if size >= chunks.PIECE_SIZE {
+	if size >= cmn.PieceSize {
 		b := msgbufPool.Get().([]byte)
 		return MsgBuffer{b[:size]}
 	} else {
@@ -27,7 +27,7 @@ func AllocMsgbuf(size int) MsgBuffer {
 }
 
 func ReleaseMsgbuf(b []byte) {
-	if len(b) >= chunks.PIECE_SIZE {
+	if len(b) >= cmn.PieceSize {
 		msgbufPool.Put(b[:POOL_BUF_SIZE])
 	}
 }

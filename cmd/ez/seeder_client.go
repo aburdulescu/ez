@@ -7,14 +7,13 @@ import (
 	"net"
 	"sync"
 
-	"github.com/aburdulescu/ez/chunks"
-	"github.com/aburdulescu/ez/hash"
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/swp"
 )
 
 var chunkPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 0, chunks.CHUNK_SIZE)
+		return make([]byte, 0, cmn.ChunkSize)
 	},
 }
 
@@ -107,8 +106,8 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	if rspType != swp.CHUNKINFO {
 		return nil, fmt.Errorf("unexpected response: %s", rspType)
 	}
-	chunkhashMsg := rsp.(swp.Chunkinfo)
-	npieces := chunkhashMsg.NPieces
+	chunkinfoMsg := rsp.(swp.Chunkinfo)
+	npieces := chunkinfoMsg.NPieces
 	buf := bytes.NewBuffer(AllocChunk())
 	for i := uint64(0); i < npieces; i++ {
 		rsp, cleanup, err := swp.Recv(c.conn)
@@ -123,8 +122,8 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 		}
 		cleanup()
 	}
-	calcChecksum := hash.NewChecksum(buf.Bytes())
-	checksum := hash.Checksum(chunkhashMsg.Checksum)
+	calcChecksum := cmn.NewChecksum(buf.Bytes())
+	checksum := cmn.Checksum(chunkinfoMsg.Checksum)
 	if calcChecksum != checksum {
 		// TODO: don't return err, retry download from other peer(or maybe the same peer?)
 		return nil, fmt.Errorf("checksum of chunk %d differs from checksum provided by peer", index)

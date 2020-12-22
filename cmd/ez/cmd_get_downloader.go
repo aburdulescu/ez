@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
 	pb "github.com/cheggaaa/pb/v3"
 )
@@ -63,8 +63,8 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	d.pb.Start()
 	defer d.pb.Finish()
 
-	nchunks := uint64(ifile.Size / chunks.CHUNK_SIZE)
-	if ifile.Size%chunks.CHUNK_SIZE != 0 {
+	nchunks := uint64(ifile.Size / cmn.ChunkSize)
+	if ifile.Size%cmn.ChunkSize != 0 {
 		nchunks++
 	}
 
@@ -124,7 +124,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 			// TODO: retry chunk download
 			continue
 		}
-		off := int64(chunk.index * chunks.CHUNK_SIZE)
+		off := int64(chunk.index * cmn.ChunkSize)
 		n, err := d.f.WriteAt(chunk.buf.Bytes(), off)
 		if err != nil {
 			log.Println(err, n)

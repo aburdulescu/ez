@@ -1,9 +1,8 @@
 FROM golang AS builder
-COPY chunks /ez/chunks
+COPY cmn /ez/cmn
 COPY cmd /ez/cmd
 COPY ezt /ez/ezt
 COPY go.* /ez/
-COPY hash /ez/hash
 COPY Makefile /ez/
 COPY swp /ez/swp
 WORKDIR /ez

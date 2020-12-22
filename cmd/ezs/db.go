@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
-	"github.com/aburdulescu/ez/hash"
 	badger "github.com/dgraph-io/badger/v2"
 )
 
@@ -71,19 +71,19 @@ func (db DB) GetIFile(id string) (ezt.IFile, error) {
 	return ifile, nil
 }
 
-func (db DB) GetChecksums(id string) ([]hash.Checksum, error) {
+func (db DB) GetChecksums(id string) ([]cmn.Checksum, error) {
 	v, err := db.get(id + ".checksums")
 	if err != nil {
 		return nil, err
 	}
-	var checksums []hash.Checksum
+	var checksums []cmn.Checksum
 	if err := json.Unmarshal(v, &checksums); err != nil {
 		return nil, err
 	}
 	return checksums, nil
 }
 
-func (db DB) Add(id string, ifile ezt.IFile, checksums []hash.Checksum) error {
+func (db DB) Add(id string, ifile ezt.IFile, checksums []cmn.Checksum) error {
 	ifileBuf := new(bytes.Buffer)
 	if err := json.NewEncoder(ifileBuf).Encode(&ifile); err != nil {
 		return err

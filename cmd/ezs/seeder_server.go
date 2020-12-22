@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/aburdulescu/ez/chunks"
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/aburdulescu/ez/swp"
 )
 
 var chunkPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, chunks.CHUNK_SIZE)
+		return make([]byte, cmn.ChunkSize)
 	},
 }
 
@@ -142,9 +142,9 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 	}
 	defer chunkPool.Put(chunkBuf)
 	chunk := chunkBuf[:n]
-	npieces := uint64(len(chunk) / chunks.PIECE_SIZE)
+	npieces := uint64(len(chunk) / cmn.PieceSize)
 	remainder := uint64(0)
-	if len(chunk)%chunks.PIECE_SIZE != 0 {
+	if len(chunk)%cmn.PieceSize != 0 {
 		npieces++
 		remainder = 1
 	}
@@ -158,15 +158,15 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 	}
 	i := uint64(0)
 	for ; i < npieces-remainder; i++ {
-		piece := chunk[i*chunks.PIECE_SIZE : (i+1)*chunks.PIECE_SIZE]
+		piece := chunk[i*cmn.PieceSize : (i+1)*cmn.PieceSize]
 		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
 			log.Println(err)
 			return err
 		}
 	}
 	if remainder != 0 {
-		log.Println(i * chunks.PIECE_SIZE)
-		piece := chunk[i*chunks.PIECE_SIZE:]
+		log.Println(i * cmn.PieceSize)
+		piece := chunk[i*cmn.PieceSize:]
 		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
 			log.Println(err)
 			return err
@@ -176,7 +176,7 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 }
 
 func readChunk(f *os.File, i uint64) ([]byte, int, error) {
-	r := io.NewSectionReader(f, int64(chunks.CHUNK_SIZE*i), chunks.CHUNK_SIZE)
+	r := io.NewSectionReader(f, int64(cmn.ChunkSize*i), cmn.ChunkSize)
 	b := chunkPool.Get().([]byte)
 	n, err := r.Read(b)
 	if err != io.EOF && err != nil {

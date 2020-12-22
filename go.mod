@@ -4,9 +4,8 @@ go 1.14
 
 require (
 	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/aburdulescu/ez/chunks v0.0.0-20201220110038-a9dcb59599cf
+	github.com/aburdulescu/ez/cmn v0.0.0-00010101000000-000000000000
 	github.com/aburdulescu/ez/ezt v0.0.0-20201220110038-a9dcb59599cf
-	github.com/aburdulescu/ez/hash v0.0.0-20201220110038-a9dcb59599cf
 	github.com/aburdulescu/ez/swp v0.0.0-20201220110038-a9dcb59599cf
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/dgraph-io/badger/v2 v2.2007.2
@@ -23,11 +22,7 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 )
 
-replace github.com/aburdulescu/ez/hash => ./hash
-
-replace github.com/aburdulescu/ez/cli => ./cli
-
-replace github.com/aburdulescu/ez/chunks => ./chunks
+replace github.com/aburdulescu/ez/cmn => ./cmn
 
 replace github.com/aburdulescu/ez/ezt => ./ezt
 
