@@ -4,16 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-
-	"github.com/zeebo/xxh3"
+	"hash/crc64"
 )
 
 type Checksum uint64 // TODO: move to separate package or rename this one or to cmn package
 
-const ChecksumSize = 8
+const ChecksumSize = crc64.Size
 
 func NewChecksum(data []byte) Checksum {
-	return Checksum(xxh3.Hash(data))
+	return Checksum(crc64.Checksum(data, crc64.MakeTable(crc64.ECMA)))
 }
 
 const IDAlg = "sha256"
