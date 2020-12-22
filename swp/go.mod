@@ -6,4 +6,4 @@ replace github.com/aburdulescu/ez/chunks => ../chunks
 
 replace github.com/aburdulescu/ez/hash => ../hash
 
-require github.com/aburdulescu/ez/chunks v0.0.0-20201025134226-187771104c07
+require github.com/aburdulescu/ez/chunks v0.0.0-20201220110038-a9dcb59599cf
