@@ -41,17 +41,16 @@ func Unmarshal(b []byte) (Msg, error) {
 		return Getchunk{index}, nil
 	case ACK:
 		return Ack{}, nil
-	case CHUNKHASH:
+	case CHUNKINFO:
 		if len(payload) < 8 {
 			return nil, ErrPayloadTooSmall
 		}
 		npieces := binary.LittleEndian.Uint64(payload[:8])
-		payload := payload[8:]
-		if len(payload) == 0 {
-			return nil, ErrEmptyPayload
+		if len(payload[8:]) < 8 {
+			return nil, ErrPayloadTooSmall
 		}
-		hash := payload
-		return Chunkhash{NPieces: npieces, Hash: hash}, nil
+		checksum := binary.LittleEndian.Uint64(payload[8:])
+		return Chunkinfo{NPieces: npieces, Checksum: checksum}, nil
 	case PIECE:
 		if len(payload) == 0 {
 			return nil, ErrEmptyPayload

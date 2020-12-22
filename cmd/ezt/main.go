@@ -59,15 +59,15 @@ func (s Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) handleGet(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
-	hash := r.URL.Query().Get("hash")
-	if hash == "" {
-		return http.StatusBadRequest, errors.New("missing 'hash' parameter")
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		return http.StatusBadRequest, errors.New("missing 'id' parameter")
 	}
-	if hash == "all" {
+	if id == "all" {
 		files := s.c.GetAll()
 		respond(w, &files)
 	} else {
-		v, err := s.c.Get(hash)
+		v, err := s.c.Get(id)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -84,22 +84,22 @@ func (s Server) handlePost(w http.ResponseWriter, r *http.Request) (int, error) 
 	}
 	log.Println("post data:", req)
 	for i := range req.Files {
-		s.c.Add(req.Files[i].Hash, req.Files[i].IFile, req.Addr)
+		s.c.Add(req.Files[i].Id, req.Files[i].IFile, req.Addr)
 	}
 	return http.StatusOK, nil
 }
 
 func (s Server) handleDelete(w http.ResponseWriter, r *http.Request) (int, error) {
 	defer r.Body.Close()
-	hash := r.URL.Query().Get("hash")
-	if hash == "" {
-		return http.StatusBadRequest, errors.New("missing 'hash' parameter")
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		return http.StatusBadRequest, errors.New("missing 'id' parameter")
 	}
 	addr := r.URL.Query().Get("addr")
-	if hash == "" {
+	if id == "" {
 		return http.StatusBadRequest, errors.New("missing 'addr' parameter")
 	}
-	if err := s.c.Del(hash, addr); err != nil {
+	if err := s.c.Del(id, addr); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil

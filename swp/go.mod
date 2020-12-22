@@ -2,8 +2,6 @@ module github.com/aburdulescu/ez/swp
 
 go 1.15
 
-replace github.com/aburdulescu/ez/chunks => ../chunks
+replace github.com/aburdulescu/ez/cmn => ../cmn
 
-replace github.com/aburdulescu/ez/hash => ../hash
-
-require github.com/aburdulescu/ez/chunks v0.0.0-20201025134226-187771104c07
+require github.com/aburdulescu/ez/cmn v0.0.0-00010101000000-000000000000

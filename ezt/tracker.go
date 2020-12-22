@@ -8,7 +8,7 @@ import (
 )
 
 type File struct {
-	Hash  string `json:"hash"`
+	Id    string `json:"id"`
 	IFile IFile  `json:"ifile"`
 }
 
@@ -23,7 +23,7 @@ type RemoveRequest struct {
 }
 
 type GetAllItem struct {
-	Hash string `json:"hash"`
+	Id   string `json:"id"`
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 }
@@ -50,7 +50,7 @@ func NewClient(url string) Client {
 }
 
 func (c Client) GetAll() (GetAllResponse, error) {
-	rsp, err := http.Get(c.url + "?hash=all")
+	rsp, err := http.Get(c.url + "?id=all")
 	if err != nil {
 		log.Println(err)
 		return GetAllResponse{}, err
@@ -65,7 +65,7 @@ func (c Client) GetAll() (GetAllResponse, error) {
 }
 
 func (c Client) Get(req GetRequest) (GetResponse, error) {
-	rsp, err := http.Get(c.url + "?hash=" + req.Id)
+	rsp, err := http.Get(c.url + "?id=" + req.Id)
 	if err != nil {
 		log.Println(err)
 		return GetResponse{}, err
@@ -93,7 +93,7 @@ func (c Client) Add(req AddRequest) error {
 }
 
 func (c Client) Remove(req RemoveRequest) error {
-	query := "?hash=" + req.Id + "&addr=" + req.Addr
+	query := "?id=" + req.Id + "&addr=" + req.Addr
 	r, err := http.NewRequest("DELETE", c.url+query, nil)
 	if err != nil {
 		return err

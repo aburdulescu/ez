@@ -1,8 +1,7 @@
 .PHONY: build test clean docker
 
 build:
-	cd chunks && go build
-	cd hash && go build
+	cd cmn && go build
 	cd ezt && go build
 	cd swp && go build
 	cd cmd/ez && go build -ldflags "-s -w"
@@ -12,8 +11,7 @@ build:
 
 test:
 	cd ezt && go test
-	cd chunks && go test
-	cd hash && go test
+	cd cmn && go test
 	cd swp && go test
 	cd cmd/ezl && go test
 	cd cmd/ez && go test
@@ -28,8 +26,7 @@ clean:
 	find -type f -name "f*B" | xargs rm -f
 
 update:
-	cd chunks && go mod tidy && go get -u
-	cd hash && go mod tidy && go get -u
+	cd cmn && go mod tidy && go get -u
 	cd swp && go mod tidy && go get -u
 	cd ezt && go mod tidy && go get -u
 	cd cmd/ez && go mod tidy && go get -u

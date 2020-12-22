@@ -9,9 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aburdulescu/ez/chunks"
 	"github.com/aburdulescu/ez/ezt"
-	"github.com/aburdulescu/ez/hash"
 )
 
 type LocalServer struct {
@@ -81,22 +79,21 @@ func (s LocalServer) addFile(path string) error {
 	if err != nil {
 		return err
 	}
-	chunks, err := chunks.FromFile(f, i.Size)
+	checksums, err := ProcessFile(f, i.Size)
 	if err != nil {
 		return err
 	}
-	h := hash.FromChunkHashes(chunks)
+	id := NewID(checksums)
 	if err != nil {
 		return err
 	}
-	id, err := s.db.Add(h, i, chunks)
-	if err != nil {
+	if err := s.db.Add(id, i, checksums); err != nil {
 		return err
 	}
 	trackerClient := ezt.NewClient(trackerURL)
 	req := ezt.AddRequest{
 		Files: []ezt.File{
-			ezt.File{Hash: id, IFile: i},
+			ezt.File{Id: id, IFile: i},
 		},
 		Addr: seedAddr,
 	}
@@ -107,23 +104,23 @@ func (s LocalServer) addFile(path string) error {
 }
 
 func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, error) {
-	hash := r.URL.Query().Get("hash")
-	if hash == "" {
-		return http.StatusBadRequest, errors.New("missing 'hash' parameter")
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		return http.StatusBadRequest, errors.New("missing 'id' parameter")
 	}
-	if err := s.removeFile(hash); err != nil {
+	if err := s.removeFile(id); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
 }
 
-func (s LocalServer) removeFile(hash string) error {
-	if err := s.db.Delete(hash); err != nil {
+func (s LocalServer) removeFile(id string) error {
+	if err := s.db.Delete(id); err != nil {
 		return err
 	}
 	trackerClient := ezt.NewClient(trackerURL)
 	req := ezt.RemoveRequest{
-		Id: hash, Addr: seedAddr,
+		Id: id, Addr: seedAddr,
 	}
 	if err := trackerClient.Remove(req); err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/spf13/cobra"
 )
@@ -55,8 +56,11 @@ func onLs(cmd *cobra.Command, args []string) error {
 	if err := json.NewDecoder(rsp.Body).Decode(&files); err != nil {
 		return err
 	}
+	p := cmn.NewPrinter()
+	defer p.Flush()
+	p.Printf("ID\tPath\tSize\n")
 	for _, f := range files {
-		fmt.Printf("%s\t%s/%s\t%d\n", f.Hash, f.IFile.Dir, f.IFile.Name, f.IFile.Size)
+		p.Printf("%s\t%s\t%d\n", f.Id, filepath.Join(f.IFile.Dir, f.IFile.Name), f.IFile.Size)
 	}
 	return nil
 }
@@ -86,7 +90,7 @@ func onRm(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	rsp, err := http.Get("http://localhost:22202/rm?hash=" + id)
+	rsp, err := http.Get("http://localhost:22202/rm?id=" + id)
 	if err != nil {
 		return err
 	}

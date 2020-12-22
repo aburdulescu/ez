@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
+	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
 	"github.com/spf13/cobra"
 )
@@ -19,8 +19,11 @@ func onLs(cmd *cobra.Command, args []string) error {
 		log.Println(err)
 		return err
 	}
+	p := cmn.NewPrinter()
+	defer p.Flush()
+	p.Printf("ID\tFilename\tSize\n")
 	for _, f := range rsp.Files {
-		fmt.Printf("%s\t\t%s\t\t%d\n", f.Hash, f.Name, f.Size)
+		p.Printf("%s\t%s\t%d\n", f.Id, f.Name, f.Size)
 	}
 	return nil
 }

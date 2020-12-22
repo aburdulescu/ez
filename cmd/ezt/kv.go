@@ -86,7 +86,7 @@ func (kv *KV) GetAll() []ezt.GetAllItem {
 	i := 0
 	for k, v := range kv.data {
 		values[i] = ezt.GetAllItem{
-			Hash: k,
+			Id:   k,
 			Name: v.IFile.Name,
 			Size: v.IFile.Size,
 		}
