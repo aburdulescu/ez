@@ -60,7 +60,7 @@ func onLs(cmd *cobra.Command, args []string) error {
 	defer p.Flush()
 	p.Printf("ID\tPath\tSize\n")
 	for _, f := range files {
-		fmt.Printf("%s\t%s/%s\t%d\n", f.Id, filepath.Join(f.IFile.Dir, f.IFile.Name), f.IFile.Size)
+		fmt.Printf("%s\t%s\t%d\n", f.Id, filepath.Join(f.IFile.Dir, f.IFile.Name), f.IFile.Size)
 	}
 	return nil
 }
