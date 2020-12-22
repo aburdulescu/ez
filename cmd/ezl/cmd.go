@@ -86,7 +86,7 @@ func onRm(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("id wasn't provided")
 	}
 	id := args[0]
-	rsp, err := http.Get("http://localhost:22202/rm?hash=" + id)
+	rsp, err := http.Get("http://localhost:22202/rm?id=" + id)
 	if err != nil {
 		return err
 	}
