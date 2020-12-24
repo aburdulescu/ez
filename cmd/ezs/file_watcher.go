@@ -2,20 +2,32 @@ package main
 
 import (
 	"log"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 type Watcher struct {
 	watcher *fsnotify.Watcher
+	db      *DB
 }
 
-func NewWatcher() (*Watcher, error) {
+func NewWatcher(db *DB) (*Watcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
-	return &Watcher{w}, nil
+	files, err := db.GetAll()
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		path := filepath.Join(file.ifile.Dir, file.ifile.Name)
+		if err := w.Add(path); err != nil {
+			return err
+		}
+	}
+	return &Watcher{w, db}, nil
 }
 
 func (w Watcher) Add(path string) error {
@@ -37,7 +49,7 @@ func (w Watcher) Run() {
 			case (event.Op & (fsnotify.Remove | fsnotify.Rename)) != 0:
 				log.Println("remove file from db")
 			case (event.Op & fsnotify.Write) != 0:
-				log.Println("process file and add it to db")
+				log.Println("remove file, process it and add it to db")
 			default:
 				log.Println("do nothing")
 			}
