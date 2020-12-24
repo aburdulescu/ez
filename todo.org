@@ -1,0 +1,20 @@
+* Issues [0/7]
+** TODO Change badger with bbolt and json with gob #35
+ Investigate if is better to use bbolt(github.com/etcd-io/bbolt).
+ Change format of saved data from json to gob.
+** TODO Add encryption option #33
+ If the tracker and seeders are public(open to the internet), it would be good
+ to have encryption for the critical messages exchanged between clients and peers
+ and clients and tracker(ex. Chunkinfo message because of checksum).
+ Or maybe all messages to be encrypted.
+ For this each node(client, seeder or tracker) needs a public/private key pair(this would be useful for #6 also).
+** TODO Investigate if chunks can be written in parallel #27
+** TODO Run execution tracer #24
+** TODO Set timeouts on all IO operations(network, filesystem etc.) #18
+** TODO Implement retry when a chunk download fails #7
+** TODO Implement a way to update the seeder address on the tracker #6
+*** Problem:
+ If the seeder changes its address, the tracker will not be aware of this change and it will store the invalid address.
+***  Solution:
+ Each seeder sends to the tracker a unique ID(based on its MAC maybe? or a hash of a private key?) along with its address.
+ When the seeder changes address, it sends it and the ID to the tracker and the tracker updates the address for the corresponding ID.
