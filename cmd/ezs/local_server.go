@@ -63,13 +63,13 @@ func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, err
 	if path == "" {
 		return http.StatusBadRequest, errors.New("missing 'path' parameter")
 	}
-	if err := s.addFile(path); err != nil {
+	if err := addFile(s.db, path); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
 }
 
-func (s LocalServer) addFile(path string) error {
+func addFile(db DB, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (s LocalServer) addFile(path string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.db.Add(id, i, checksums); err != nil {
+	if err := db.Add(id, i, checksums); err != nil {
 		return err
 	}
 	trackerClient := ezt.NewClient(trackerURL)
@@ -108,14 +108,14 @@ func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, erro
 	if id == "" {
 		return http.StatusBadRequest, errors.New("missing 'id' parameter")
 	}
-	if err := s.removeFile(id); err != nil {
+	if err := removeFile(s.db, id); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	return http.StatusOK, nil
 }
 
-func (s LocalServer) removeFile(id string) error {
-	if err := s.db.Delete(id); err != nil {
+func removeFile(db DB, id string) error {
+	if err := db.Delete(id); err != nil {
 		return err
 	}
 	trackerClient := ezt.NewClient(trackerURL)

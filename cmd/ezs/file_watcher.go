@@ -9,11 +9,11 @@ import (
 
 type Watcher struct {
 	watcher *fsnotify.Watcher
-	db      *DB
+	db      DB
 	fileIds map[string]string
 }
 
-func NewWatcher(db *DB) (*Watcher, error) {
+func NewWatcher(db DB) (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -59,12 +59,24 @@ func (w Watcher) Run() {
 					log.Printf("%s not found", event.Name)
 					continue
 				}
-				if err := w.db.Delete(id); err != nil {
+				if err := removeFile(w.db, id); err != nil {
 					log.Println(err)
 					continue
 				}
-			case (event.Op & fsnotify.Write) != 0:
-				log.Println("remove file, process it and add it to db")
+			case (event.Op & (fsnotify.Write | fsnotify.Chmod)) != 0:
+				id, ok := w.fileIds[event.Name]
+				if !ok {
+					log.Printf("%s not found", event.Name)
+					continue
+				}
+				if err := removeFile(w.db, id); err != nil {
+					log.Println(err)
+					continue
+				}
+				if err := addFile(w.db, event.Name); err != nil {
+					log.Println(err)
+					continue
+				}
 			default:
 			}
 		case err, ok := <-w.watcher.Errors:
