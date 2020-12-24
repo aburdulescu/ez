@@ -51,7 +51,13 @@ func run() error {
 	}
 	go seederServer.ListenAndServe()
 
-	go NewLocalServer(db).Run()
+	fileWatcher, err := NewWatcher(db)
+	if err != nil {
+		return err
+	}
+	go fileWatcher.Run()
+
+	go NewLocalServer(db, fileWatcher.Channel()).Run()
 
 	trackerProbeServer, err := NewTrackerProbeServer("239.23.23.0:22203", db)
 	if err != nil {
