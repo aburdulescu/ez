@@ -21,18 +21,18 @@ var chunkPool = sync.Pool{
 
 type SeederServer struct {
 	ln net.Listener
-	db DB
+	db *DB
 }
 
 type SeederServerReqHandler struct {
 	id    string
 	conn  net.Conn
-	db    DB
+	db    *DB
 	f     *os.File
 	ifile *ezt.IFile
 }
 
-func NewSeederServer(db DB) (SeederServer, error) {
+func NewSeederServer(db *DB) (SeederServer, error) {
 	ln, err := net.Listen("tcp", ":22201")
 	if err != nil {
 		return SeederServer{}, err

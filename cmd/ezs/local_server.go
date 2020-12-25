@@ -7,17 +7,14 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-
-	"github.com/aburdulescu/ez/ezt"
 )
 
 type LocalServer struct {
-	db          DB
+	db          *DB
 	watcherChan chan<- WatcherEntry
 }
 
-func NewLocalServer(db DB, watcherChan chan<- WatcherEntry) LocalServer {
+func NewLocalServer(db *DB, watcherChan chan<- WatcherEntry) LocalServer {
 	s := LocalServer{db: db, watcherChan: watcherChan}
 	http.Handle("/list", errHandler(s.handleList))
 	http.Handle("/add", errHandler(s.handleAdd))
@@ -49,7 +46,7 @@ func (s LocalServer) handleSync(w http.ResponseWriter, r *http.Request) (int, er
 }
 
 func (s LocalServer) handleList(w http.ResponseWriter, r *http.Request) (int, error) {
-	files, err := s.db.GetAll()
+	files, err := s.db.GetFiles()
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -64,7 +61,7 @@ func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, err
 	if path == "" {
 		return http.StatusBadRequest, errors.New("missing 'path' parameter")
 	}
-	id, err := addFile(s.db, path)
+	id, err := AddFile(s.db, path)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -76,46 +73,12 @@ func (s LocalServer) handleAdd(w http.ResponseWriter, r *http.Request) (int, err
 	return http.StatusOK, nil
 }
 
-func addFile(db DB, path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	i, err := ezt.NewIFile(f, path)
-	if err != nil {
-		return "", err
-	}
-	checksums, err := ProcessFile(f, i.Size)
-	if err != nil {
-		return "", err
-	}
-	id := NewID(checksums)
-	if err != nil {
-		return "", err
-	}
-	if err := db.Add(id, i, checksums); err != nil {
-		return "", err
-	}
-	trackerClient := ezt.NewClient(trackerURL)
-	req := ezt.AddRequest{
-		Files: []ezt.File{
-			ezt.File{Id: id, IFile: i},
-		},
-		Addr: seedAddr,
-	}
-	if err := trackerClient.Add(req); err != nil {
-		log.Println(err)
-	}
-	return id, nil
-}
-
 func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, error) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		return http.StatusBadRequest, errors.New("missing 'id' parameter")
 	}
-	if err := removeFile(s.db, id); err != nil {
+	if err := RemoveFile(s.db, id); err != nil {
 		return http.StatusInternalServerError, err
 	}
 	s.watcherChan <- WatcherEntry{
@@ -123,20 +86,6 @@ func (s LocalServer) handleRm(w http.ResponseWriter, r *http.Request) (int, erro
 		Id: id,
 	}
 	return http.StatusOK, nil
-}
-
-func removeFile(db DB, id string) error {
-	if err := db.Delete(id); err != nil {
-		return err
-	}
-	trackerClient := ezt.NewClient(trackerURL)
-	req := ezt.RemoveRequest{
-		Id: id, Addr: seedAddr,
-	}
-	if err := trackerClient.Remove(req); err != nil {
-		log.Println(err)
-	}
-	return nil
 }
 
 func respond(w http.ResponseWriter, data interface{}) error {

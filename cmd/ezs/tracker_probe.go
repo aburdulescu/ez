@@ -15,10 +15,10 @@ type HandlerFunc func(*net.UDPConn, *net.UDPAddr, []byte)
 
 type TrackerProbeServer struct {
 	conn *net.UDPConn
-	db   DB
+	db   *DB
 }
 
-func NewTrackerProbeServer(addr string, db DB) (TrackerProbeServer, error) {
+func NewTrackerProbeServer(addr string, db *DB) (TrackerProbeServer, error) {
 	a, err := net.ResolveUDPAddr("udp4", addr)
 	if err != nil {
 		return TrackerProbeServer{}, err
@@ -51,8 +51,8 @@ func (s TrackerProbeServer) ListenAndServe() {
 }
 
 // TODO: first get the file from the tracker, compare with local ones and send the diff to tracker
-func updateTracker(db DB) error {
-	files, err := db.GetAll()
+func updateTracker(db *DB) error {
+	files, err := db.GetFiles()
 	if err != nil {
 		return err
 	}

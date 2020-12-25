@@ -23,7 +23,7 @@ var trackerAddr string
 var trackerURL string
 
 func run() error {
-	flag.StringVar(&dbPath, "dbpath", "./db", "path where the database is stored")
+	flag.StringVar(&dbPath, "dbpath", "./seeder.db", "path where the database is stored")
 	flag.StringVar(&seedAddr, "seedaddr", "", "address to used by peers")
 	flag.StringVar(&trackerAddr, "trackeraddr", "", "tracker address")
 	flag.Parse()
@@ -73,7 +73,7 @@ func run() error {
 	return nil
 }
 
-func waitForSignal(c chan os.Signal, db DB) {
+func waitForSignal(c chan os.Signal, db *DB) {
 	<-c
 	db.Close()
 }
