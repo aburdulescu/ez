@@ -20,12 +20,12 @@ type WatcherEntry struct {
 
 type Watcher struct {
 	watcher  *fsnotify.Watcher
-	db       DB
+	db       *DB
 	fileIds  map[string]string
 	incoming chan WatcherEntry
 }
 
-func NewWatcher(db DB) (*Watcher, error) {
+func NewWatcher(db *DB) (*Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func NewWatcher(db DB) (*Watcher, error) {
 		fileIds:  make(map[string]string),
 		incoming: make(chan WatcherEntry),
 	}
-	files, err := db.GetAll()
+	files, err := db.GetFiles()
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (w Watcher) Run() {
 					log.Printf("%s not found", event.Name)
 					continue
 				}
-				if err := removeFile(w.db, id); err != nil {
+				if err := RemoveFile(w.db, id); err != nil {
 					log.Println(err)
 					continue
 				}
@@ -98,7 +98,7 @@ func (w Watcher) Run() {
 					log.Printf("%s not found", event.Name)
 					continue
 				}
-				if err := removeFile(w.db, id); err != nil {
+				if err := RemoveFile(w.db, id); err != nil {
 					log.Println(err)
 					continue
 				}
@@ -106,7 +106,7 @@ func (w Watcher) Run() {
 					log.Println(err)
 					continue
 				}
-				id, err := addFile(w.db, event.Name)
+				id, err := AddFile(w.db, event.Name)
 				if err != nil {
 					log.Println(err)
 					continue

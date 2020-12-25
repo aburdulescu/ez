@@ -3,84 +3,43 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"log"
-	"strings"
 
 	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
-	badger "github.com/dgraph-io/badger/v2"
+	bolt "go.etcd.io/bbolt"
+)
+
+var (
+	IfilesBucket    = []byte("ifiles")
+	ChecksumsBucket = []byte("checksums")
 )
 
 type DB struct {
-	db *badger.DB
+	db *bolt.DB
 }
 
-func NewDB(path string) (DB, error) {
-	opts := badger.DefaultOptions(path).WithLogger(nil)
-	db, err := badger.Open(opts)
+func NewDB(path string) (*DB, error) {
+	db, err := bolt.Open(path, 0666, nil)
 	if err != nil {
-		return DB{}, err
+		return nil, err
 	}
-	return DB{db}, nil
-}
-
-func (db DB) Close() {
-	db.db.Close()
-}
-
-func (db DB) GetAll() ([]ezt.File, error) {
-	var files []ezt.File
-	err := db.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				kstr := string(k)
-				if strings.HasSuffix(kstr, "ifile") {
-					var i ezt.IFile
-					if err := json.Unmarshal(v, &i); err != nil {
-						return err
-					}
-					id := strings.Split(kstr, ".")[0]
-					files = append(files, ezt.File{Id: id, IFile: i})
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
+	err = db.Update(func(tx *bolt.Tx) error {
+		if _, err := tx.CreateBucketIfNotExists(IfilesBucket); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(ChecksumsBucket); err != nil {
+			return err
 		}
 		return nil
 	})
-	return files, err
-}
-
-func (db DB) GetIFile(id string) (ezt.IFile, error) {
-	v, err := db.get(id + ".ifile")
-	if err != nil {
-		return ezt.IFile{}, err
-	}
-	var ifile ezt.IFile
-	if err := json.Unmarshal(v, &ifile); err != nil {
-		return ezt.IFile{}, err
-	}
-	return ifile, nil
-}
-
-func (db DB) GetChecksums(id string) ([]cmn.Checksum, error) {
-	v, err := db.get(id + ".checksums")
 	if err != nil {
 		return nil, err
 	}
-	var checksums []cmn.Checksum
-	if err := json.Unmarshal(v, &checksums); err != nil {
-		return nil, err
-	}
-	return checksums, nil
+	return &DB{db}, nil
+}
+
+func (db DB) Close() error {
+	return db.db.Close()
 }
 
 func (db DB) Add(id string, ifile ezt.IFile, checksums []cmn.Checksum) error {
@@ -92,54 +51,87 @@ func (db DB) Add(id string, ifile ezt.IFile, checksums []cmn.Checksum) error {
 	if err := json.NewEncoder(checksumsBuf).Encode(&checksums); err != nil {
 		return err
 	}
-	entries := []*badger.Entry{
-		badger.NewEntry([]byte(id+".ifile"), ifileBuf.Bytes()),
-		badger.NewEntry([]byte(id+".checksums"), checksumsBuf.Bytes()),
-	}
-	return db.add(entries)
-}
-
-func (db DB) Delete(id string) error {
-	err := db.db.Update(func(txn *badger.Txn) error {
-		ifileKey := id + ".ifile"
-		if err := txn.Delete([]byte(ifileKey)); err != nil {
+	return db.db.Update(func(tx *bolt.Tx) error {
+		ifilesBucket := tx.Bucket(IfilesBucket)
+		if err := ifilesBucket.Put([]byte(id), ifileBuf.Bytes()); err != nil {
 			return err
 		}
-		checksumsKey := id + ".checksums"
-		if err := txn.Delete([]byte(checksumsKey)); err != nil {
+		checksumsBucket := tx.Bucket(ChecksumsBucket)
+		if err := checksumsBucket.Put([]byte(id), checksumsBuf.Bytes()); err != nil {
 			return err
 		}
 		return nil
 	})
-	return err
 }
 
-func (db DB) add(entries []*badger.Entry) error {
-	return db.db.Update(func(txn *badger.Txn) error {
-		for _, entry := range entries {
-			err := txn.SetEntry(entry)
-			if err != nil {
+func (db DB) Delete(id string) error {
+	return db.db.Update(func(tx *bolt.Tx) error {
+		ifilesBucket := tx.Bucket(IfilesBucket)
+		if err := ifilesBucket.Delete([]byte(id)); err != nil {
+			return err
+		}
+		checksumsBucket := tx.Bucket(ChecksumsBucket)
+		if err := checksumsBucket.Delete([]byte(id)); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (db DB) GetIFile(id string) (ezt.IFile, error) {
+	b, err := db.get(IfilesBucket, []byte(id))
+	if err != nil {
+		return ezt.IFile{}, err
+	}
+	if err != nil {
+		return ezt.IFile{}, err
+	}
+	var ifile ezt.IFile
+	if err := json.Unmarshal(b, &ifile); err != nil {
+		return ezt.IFile{}, err
+	}
+	return ifile, nil
+}
+
+func (db DB) GetChecksums(id string) ([]cmn.Checksum, error) {
+	b, err := db.get(ChecksumsBucket, []byte(id))
+	if err != nil {
+		return nil, err
+	}
+	var checksums []cmn.Checksum
+	if err := json.Unmarshal(b, &checksums); err != nil {
+		return nil, err
+	}
+	return checksums, nil
+}
+
+func (db DB) GetFiles() ([]ezt.File, error) {
+	var files []ezt.File
+	err := db.db.View(func(tx *bolt.Tx) error {
+		bck := tx.Bucket(IfilesBucket)
+		c := bck.Cursor()
+		defer c.Delete()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			id := string(k)
+			var ifile ezt.IFile
+			if err := json.Unmarshal(v, &ifile); err != nil {
 				return err
 			}
+			files = append(files, ezt.File{Id: id, IFile: ifile})
 		}
 		return nil
 	})
+	return files, err
 }
 
-func (db DB) get(id string) ([]byte, error) {
-	var v []byte
-	err := db.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(id))
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		v, err = item.ValueCopy(nil)
-		if err != nil {
-			log.Println(err)
-			return err
-		}
+func (db DB) get(bucket, key []byte) ([]byte, error) {
+	var b []byte
+	err := db.db.View(func(tx *bolt.Tx) error {
+		bck := tx.Bucket(bucket)
+		v := bck.Get(key)
+		b = make([]byte, len(v))
+		copy(b, v)
 		return nil
 	})
-	return v, err
+	return b, err
 }
