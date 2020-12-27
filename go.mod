@@ -11,7 +11,6 @@ require (
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/spf13/cobra v1.1.1
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/sys v0.0.0-20201223074533-0d417f636930 // indirect
 )

@@ -2,6 +2,7 @@ FROM golang AS builder
 COPY cmn /ez/cmn
 COPY cmd /ez/cmd
 COPY ezt /ez/ezt
+COPY cadet /ez/cadet
 COPY go.* /ez/
 COPY Makefile /ez/
 COPY swp /ez/swp
