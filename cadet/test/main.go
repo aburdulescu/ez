@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/aburdulescu/ez/cadet"
 )
 
@@ -21,9 +19,7 @@ func main() {
 
 	root.AddCommand(add)
 
-	if err := root.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	root.Execute()
 }
 
 func onAdd(cmd *cadet.Command, args []string) error {

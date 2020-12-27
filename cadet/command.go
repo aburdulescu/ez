@@ -101,6 +101,14 @@ func (c *Command) Execute() error {
 		return nil
 	}
 
+	if len(args) > 0 {
+		switch args[0] {
+		case "-h", "--help", "help":
+			c.Usage()
+			return nil
+		}
+	}
+
 	cmd, flags, err := c.Find(args)
 	if err != nil {
 		// If found parse to a subcommand and then failed, talk about the subcommand
@@ -112,10 +120,16 @@ func (c *Command) Execute() error {
 		return err
 	}
 
+	if !cmd.Runnable() {
+		c.Usage()
+		return nil
+	}
+
 	if err = cmd.Run(cmd, flags); err != nil {
 		cmd.HelpFunc()(cmd, args)
 		return nil
 	}
+
 	return nil
 }
 
@@ -176,6 +190,9 @@ func (c *Command) Find(args []string) (*Command, []string, error) {
 	}
 
 	commandFound, a := innerfind(c, args)
+	if commandFound == c && len(args) > 0 {
+		return c, a, fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())
+	}
 	return commandFound, a, nil
 }
 
