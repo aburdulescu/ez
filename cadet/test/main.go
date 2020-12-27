@@ -34,7 +34,7 @@ func main() {
 	root.Execute()
 }
 
-func onAdd(cmd *cadet.Command, args []string) error {
+func onAdd(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing filepath")
 	}
@@ -42,7 +42,7 @@ func onAdd(cmd *cadet.Command, args []string) error {
 	return nil
 }
 
-func onRm(cmd *cadet.Command, args []string) error {
+func onRm(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing filepath")
 	}

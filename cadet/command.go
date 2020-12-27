@@ -27,7 +27,7 @@ type Command struct {
 	Example string
 
 	// Run: Typically the actual work function. Most commands will only implement this.
-	Run func(cmd *Command, args []string) error
+	Run func(args []string) error
 
 	// commands is the list of commands supported by this program.
 	commands []*Command
@@ -73,7 +73,7 @@ func (c *Command) Execute() {
 		}
 	}
 
-	if err := cmd.Run(cmd, args); err != nil {
+	if err := cmd.Run(args); err != nil {
 		cmd.HandlerErr(err)
 		return
 	}
