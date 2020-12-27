@@ -17,7 +17,14 @@ func main() {
 		Run:     onAdd,
 	}
 
-	root.AddCommand(add)
+	rm := &cadet.Command{
+		Use:     "rm filepath",
+		Short:   "Remove a file.",
+		Example: "cadet rm foo/bar.txt",
+		Run:     onAdd,
+	}
+
+	root.AddCommand(add, rm)
 
 	root.Execute()
 }

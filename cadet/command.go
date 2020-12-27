@@ -39,6 +39,9 @@ type Command struct {
 	// args is actual args parsed from flags.
 	args []string
 
+	// Max lengths of commands' string lengths for use in padding.
+	commandsMaxNameLen int
+
 	// inReader is a reader defined by the user that replaces stdin
 	inReader io.Reader
 	// outWriter is a writer defined by the user that replaces stdout
@@ -46,35 +49,6 @@ type Command struct {
 	// errWriter is a writer defined by the user that replaces stderr
 	errWriter io.Writer
 }
-
-const usageTemplate = `
-{{.Short}}
-
-Usage:
-{{if .Runnable}}
-  {{.UseLine}}
-{{end}}
-
-{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]
-{{end}}
-
-{{if .HasExample}}
-Examples:
-{{.Example}}
-{{end}}
-
-{{if .HasAvailableSubCommands}}
-Available Commands:
-{{range .Commands}}
-{{if .IsAvailableCommand}}
-  {{rpad .Name .NamePadding }} {{.Short}}
-{{end}}
-{{end}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.
-{{end}}
-`
 
 // Root finds root command.
 func (c *Command) Root() *Command {
@@ -140,6 +114,10 @@ func (c *Command) AddCommand(cmds ...*Command) {
 			panic("Command can't be a child of itself")
 		}
 		cmds[i].parent = c
+		nameLen := len(x.Name())
+		if nameLen > c.commandsMaxNameLen {
+			c.commandsMaxNameLen = nameLen
+		}
 		c.commands = append(c.commands, x)
 	}
 }
@@ -372,9 +350,6 @@ func (c *Command) UsageString() string {
 
 // HelpTemplate return help template for the command.
 func (c *Command) HelpTemplate() string {
-	if c.HasParent() {
-		return c.parent.HelpTemplate()
-	}
 	return `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
 
 {{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
@@ -399,12 +374,25 @@ func (c *Command) Help() error {
 	return nil
 }
 
+func (c *Command) UsageTemplate() string {
+	return `{{.Short}}
+
+Usage:
+{{if .Runnable}}{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}{{.CommandPath}} [command]{{end}}
+{{if .HasExample}}Examples:{{.Example}}{{end}}
+{{if .HasAvailableSubCommands}}Available Commands:{{range .Commands}}
+{{if .IsAvailableCommand}}{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+}
+
 func (c *Command) UsageFunc() (f func(*Command) error) {
 	if c.HasParent() {
 		return c.Parent().UsageFunc()
 	}
 	return func(c *Command) error {
-		err := tmpl(c.OutOrStderr(), usageTemplate, c)
+		err := tmpl(c.OutOrStderr(), c.UsageTemplate(), c)
 		if err != nil {
 			c.PrintErrln(err)
 		}
@@ -416,6 +404,16 @@ func (c *Command) UsageFunc() (f func(*Command) error) {
 // Used when a user provides invalid input.
 func (c *Command) Usage() error {
 	return c.UsageFunc()(c)
+}
+
+var minNamePadding = 11
+
+// NamePadding returns padding for the name.
+func (c *Command) NamePadding() int {
+	if c.parent == nil || minNamePadding > c.parent.commandsMaxNameLen {
+		return minNamePadding
+	}
+	return c.parent.commandsMaxNameLen
 }
 
 var templateFuncs = template.FuncMap{
