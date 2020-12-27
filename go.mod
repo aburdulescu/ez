@@ -3,9 +3,9 @@ module github.com/aburdulescu/ez
 go 1.14
 
 require (
-	github.com/aburdulescu/ez/cmn v0.0.0-20201224230748-ae26a4130db6
-	github.com/aburdulescu/ez/ezt v0.0.0-20201224230748-ae26a4130db6
-	github.com/aburdulescu/ez/swp v0.0.0-20201224230748-ae26a4130db6
+	github.com/aburdulescu/ez/cmn v0.0.0-20201225204104-492c064992e3
+	github.com/aburdulescu/ez/ezt v0.0.0-20201225204104-492c064992e3
+	github.com/aburdulescu/ez/swp v0.0.0-20201225204104-492c064992e3
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
