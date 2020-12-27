@@ -1,11 +1,13 @@
 package cmn
 
-import "hash/crc64"
+import (
+	xxh "github.com/cespare/xxhash/v2"
+)
 
 type Checksum uint64
 
-const ChecksumSize = crc64.Size
+const ChecksumSize = 8
 
 func NewChecksum(data []byte) Checksum {
-	return Checksum(crc64.Checksum(data, crc64.MakeTable(crc64.ECMA)))
+	return Checksum(xxh.Sum64(data))
 }
