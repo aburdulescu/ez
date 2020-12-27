@@ -4,4 +4,4 @@ go 1.15
 
 replace github.com/aburdulescu/ez/cmn => ../cmn
 
-require github.com/aburdulescu/ez/cmn v0.0.0-20201225204104-492c064992e3
+require github.com/aburdulescu/ez/cmn v0.0.0-20201227061956-1d7845970953
