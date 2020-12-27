@@ -70,19 +70,6 @@ func (c *Command) Execute() error {
 
 	args := os.Args[1:]
 
-	if len(args) == 0 {
-		c.Usage()
-		return nil
-	}
-
-	if len(args) > 0 {
-		switch args[0] {
-		case "-h", "--help", "help":
-			c.Usage()
-			return nil
-		}
-	}
-
 	cmd, flags, err := c.Find(args)
 	if err != nil {
 		// If found parse to a subcommand and then failed, talk about the subcommand
@@ -95,12 +82,25 @@ func (c *Command) Execute() error {
 	}
 
 	if !cmd.Runnable() {
-		c.Usage()
+		cmd.Usage()
 		return nil
 	}
 
+	if len(flags) == 0 {
+		cmd.Usage()
+		return nil
+	}
+
+	if len(flags) > 0 {
+		switch flags[0] {
+		case "-h", "--help", "help":
+			cmd.Usage()
+			return nil
+		}
+	}
+
 	if err = cmd.Run(cmd, flags); err != nil {
-		cmd.HelpFunc()(cmd, args)
+		cmd.HelpFunc()(cmd, flags)
 		return nil
 	}
 
@@ -377,11 +377,15 @@ func (c *Command) Help() error {
 func (c *Command) UsageTemplate() string {
 	return `{{.Short}}
 
-Usage:
-{{if .Runnable}}{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}{{.CommandPath}} [command]{{end}}
-{{if .HasExample}}Examples:{{.Example}}{{end}}
-{{if .HasAvailableSubCommands}}Available Commands:{{range .Commands}}
-{{if .IsAvailableCommand}}{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
+Usage:{{if .Runnable}}
+{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+{{.CommandPath}} [command]{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if .IsAvailableCommand}}
+{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
