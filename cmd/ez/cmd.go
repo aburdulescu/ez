@@ -1,33 +1,30 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
+	"github.com/aburdulescu/ez/cadet"
 )
 
 var (
-	rootCmd = &cobra.Command{
+	root = &cadet.Command{
 		Use:   "ez",
 		Short: "Easy to use p2p file transfer tool for your local network",
 	}
-	lsCmd = &cobra.Command{
-		Use:   "ls",
-		Short: "List files",
-		RunE:  onLs,
-	}
-	getCmd = &cobra.Command{
-		Use:   "get",
-		Short: "Download a file",
-		RunE:  onGet,
-	}
-	trackerCmd = &cobra.Command{
-		Use:   "tracker",
-		Short: "Set/get tracker address",
-		RunE:  onTracker,
+
+	commands = []*cadet.Command{
+		&cadet.Command{
+			Use:   "ls",
+			Short: "List files",
+			Run:   onLs,
+		},
+		&cadet.Command{
+			Use:   "get",
+			Short: "Download a file",
+			Run:   onGet,
+		},
+		&cadet.Command{
+			Use:   "tracker",
+			Short: "Set/get tracker address",
+			Run:   onTracker,
+		},
 	}
 )
-
-func init() {
-	rootCmd.AddCommand(lsCmd)
-	rootCmd.AddCommand(getCmd)
-	rootCmd.AddCommand(trackerCmd)
-}

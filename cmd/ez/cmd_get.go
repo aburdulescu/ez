@@ -5,10 +5,9 @@ import (
 	"log"
 
 	"github.com/aburdulescu/ez/ezt"
-	"github.com/spf13/cobra"
 )
 
-func onGet(cmd *cobra.Command, args []string) error {
+func onGet(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("id wasn't provided")
 	}
