@@ -58,15 +58,7 @@ func (c *Command) Execute() {
 		return
 	}
 
-	cmd, args, err := c.Find(os.Args[1:])
-	if err != nil {
-		// If found parse to a subcommand and then failed, talk about the subcommand
-		if cmd != nil {
-			c = cmd
-		}
-		c.HandlerErr(err)
-		return
-	}
+	cmd, args := c.Find(os.Args[1:])
 
 	if !cmd.Runnable() {
 		cmd.Usage()
@@ -81,17 +73,20 @@ func (c *Command) Execute() {
 		}
 	}
 
-	if err = cmd.Run(cmd, args); err != nil {
+	if err := cmd.Run(cmd, args); err != nil {
 		cmd.HandlerErr(err)
 		return
 	}
 }
 
 // AddCommand adds one or more commands to this parent command.
-func (c *Command) AddCommand(cmds ...*Command) {
+func (c *Command) AddCommand(cmds ...*Command) error {
+	if c.Runnable() {
+		return fmt.Errorf("%q command is runnable therefore cannot have subcommands", c.Name())
+	}
 	for i, x := range cmds {
 		if cmds[i] == c {
-			panic("Command can't be a child of itself")
+			return fmt.Errorf("Command can't be a child of itself")
 		}
 		cmds[i].parent = c
 		nameLen := len(x.Name())
@@ -100,6 +95,7 @@ func (c *Command) AddCommand(cmds ...*Command) {
 		}
 		c.commands = append(c.commands, x)
 	}
+	return nil
 }
 
 // Commands returns a slice of child commands.
@@ -132,7 +128,7 @@ func argsMinusFirstX(args []string, x string) []string {
 
 // Find the target command given the args and command tree
 // Meant to be run on the highest node. Only searches down.
-func (c *Command) Find(args []string) (*Command, []string, error) {
+func (c *Command) Find(args []string) (*Command, []string) {
 	var innerfind func(*Command, []string) (*Command, []string)
 
 	innerfind = func(c *Command, innerArgs []string) (*Command, []string) {
@@ -148,10 +144,7 @@ func (c *Command) Find(args []string) (*Command, []string, error) {
 	}
 
 	commandFound, a := innerfind(c, args)
-	if commandFound == c && len(args) > 0 {
-		return c, a, fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())
-	}
-	return commandFound, a, nil
+	return commandFound, a
 }
 
 // CommandPath returns the full path to this command.

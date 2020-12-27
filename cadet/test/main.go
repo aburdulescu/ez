@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aburdulescu/ez/cadet"
 )
@@ -26,7 +27,9 @@ func main() {
 		Run:     onRm,
 	}
 
-	root.AddCommand(add, rm)
+	if err := root.AddCommand(add, rm); err != nil {
+		log.Fatal(err)
+	}
 
 	root.Execute()
 }
