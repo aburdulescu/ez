@@ -6,11 +6,9 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-
-	"github.com/spf13/cobra"
 )
 
-func onTracker(cmd *cobra.Command, args []string) error {
+func onTracker(args []string) error {
 	if len(args) < 1 {
 		tracker, err := getTracker()
 		if err != nil {

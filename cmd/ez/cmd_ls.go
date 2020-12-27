@@ -5,10 +5,9 @@ import (
 
 	"github.com/aburdulescu/ez/cmn"
 	"github.com/aburdulescu/ez/ezt"
-	"github.com/spf13/cobra"
 )
 
-func onLs(cmd *cobra.Command, args []string) error {
+func onLs(args []string) error {
 	trackerURL, err := getTrackerURL()
 	if err != nil {
 		return err
