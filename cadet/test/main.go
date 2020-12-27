@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/aburdulescu/ez/cadet"
 )
 
@@ -21,7 +23,7 @@ func main() {
 		Use:     "rm filepath",
 		Short:   "Remove a file.",
 		Example: "cadet rm foo/bar.txt",
-		Run:     onAdd,
+		Run:     onRm,
 	}
 
 	root.AddCommand(add, rm)
@@ -30,5 +32,17 @@ func main() {
 }
 
 func onAdd(cmd *cadet.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing filepath")
+	}
+	fmt.Println("add:", args[0])
+	return nil
+}
+
+func onRm(cmd *cadet.Command, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing filepath")
+	}
+	fmt.Println("remove:", args[0])
 	return nil
 }
