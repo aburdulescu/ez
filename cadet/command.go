@@ -1,13 +1,11 @@
 package cadet
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"strings"
-	"unicode"
+	"text/template"
 )
 
 type Command struct {
@@ -41,13 +39,6 @@ type Command struct {
 
 	// Max lengths of commands' string lengths for use in padding.
 	commandsMaxNameLen int
-
-	// inReader is a reader defined by the user that replaces stdin
-	inReader io.Reader
-	// outWriter is a writer defined by the user that replaces stdout
-	outWriter io.Writer
-	// errWriter is a writer defined by the user that replaces stderr
-	errWriter io.Writer
 }
 
 // Root finds root command.
@@ -60,51 +51,40 @@ func (c *Command) Root() *Command {
 
 // Execute uses the args (os.Args[1:] by default)
 // and run through the command tree finding appropriate matches for commands.
-func (c *Command) Execute() error {
+func (c *Command) Execute() {
 	// Regardless of what command execute is called on, run on Root only
 	if c.HasParent() {
-		return c.Root().Execute()
+		c.Root().Execute()
+		return
 	}
 
-	//	c.InitDefaultHelpCmd()
-
-	args := os.Args[1:]
-
-	cmd, flags, err := c.Find(args)
+	cmd, args, err := c.Find(os.Args[1:])
 	if err != nil {
 		// If found parse to a subcommand and then failed, talk about the subcommand
 		if cmd != nil {
 			c = cmd
 		}
-		c.PrintErrln("Error:", err.Error())
-		c.PrintErrf("Run '%v --help' for usage.\n", c.CommandPath())
-		return err
+		c.HandlerErr(err)
+		return
 	}
 
 	if !cmd.Runnable() {
 		cmd.Usage()
-		return nil
+		return
 	}
 
-	if len(flags) == 0 {
-		cmd.Usage()
-		return nil
-	}
-
-	if len(flags) > 0 {
-		switch flags[0] {
+	if len(args) > 0 {
+		switch args[0] {
 		case "-h", "--help", "help":
 			cmd.Usage()
-			return nil
+			return
 		}
 	}
 
-	if err = cmd.Run(cmd, flags); err != nil {
-		cmd.HelpFunc()(cmd, flags)
-		return nil
+	if err = cmd.Run(cmd, args); err != nil {
+		cmd.HandlerErr(err)
+		return
 	}
-
-	return nil
 }
 
 // AddCommand adds one or more commands to this parent command.
@@ -249,129 +229,23 @@ func (c *Command) Parent() *Command {
 	return c.parent
 }
 
-// OutOrStdout returns output to stdout.
-func (c *Command) OutOrStdout() io.Writer {
-	return c.getOut(os.Stdout)
+var out = os.Stderr
+
+func print(i ...interface{}) {
+	fmt.Fprint(out, i...)
 }
 
-// OutOrStderr returns output to stderr
-func (c *Command) OutOrStderr() io.Writer {
-	return c.getOut(os.Stderr)
+func println(i ...interface{}) {
+	print(fmt.Sprintln(i...))
 }
 
-// ErrOrStderr returns output to stderr
-func (c *Command) ErrOrStderr() io.Writer {
-	return c.getErr(os.Stderr)
+func printf(format string, i ...interface{}) {
+	print(fmt.Sprintf(format, i...))
 }
 
-// InOrStdin returns input to stdin
-func (c *Command) InOrStdin() io.Reader {
-	return c.getIn(os.Stdin)
-}
-
-func (c *Command) getOut(def io.Writer) io.Writer {
-	if c.outWriter != nil {
-		return c.outWriter
-	}
-	if c.HasParent() {
-		return c.parent.getOut(def)
-	}
-	return def
-}
-
-func (c *Command) getErr(def io.Writer) io.Writer {
-	if c.errWriter != nil {
-		return c.errWriter
-	}
-	if c.HasParent() {
-		return c.parent.getErr(def)
-	}
-	return def
-}
-
-func (c *Command) getIn(def io.Reader) io.Reader {
-	if c.inReader != nil {
-		return c.inReader
-	}
-	if c.HasParent() {
-		return c.parent.getIn(def)
-	}
-	return def
-}
-
-// Print is a convenience method to Print to the defined output, fallback to Stderr if not set.
-func (c *Command) Print(i ...interface{}) {
-	fmt.Fprint(c.OutOrStderr(), i...)
-}
-
-// Println is a convenience method to Println to the defined output, fallback to Stderr if not set.
-func (c *Command) Println(i ...interface{}) {
-	c.Print(fmt.Sprintln(i...))
-}
-
-// Printf is a convenience method to Printf to the defined output, fallback to Stderr if not set.
-func (c *Command) Printf(format string, i ...interface{}) {
-	c.Print(fmt.Sprintf(format, i...))
-}
-
-// PrintErr is a convenience method to Print to the defined Err output, fallback to Stderr if not set.
-func (c *Command) PrintErr(i ...interface{}) {
-	fmt.Fprint(c.ErrOrStderr(), i...)
-}
-
-// PrintErrln is a convenience method to Println to the defined Err output, fallback to Stderr if not set.
-func (c *Command) PrintErrln(i ...interface{}) {
-	c.PrintErr(fmt.Sprintln(i...))
-}
-
-// PrintErrf is a convenience method to Printf to the defined Err output, fallback to Stderr if not set.
-func (c *Command) PrintErrf(format string, i ...interface{}) {
-	c.PrintErr(fmt.Sprintf(format, i...))
-}
-
-// UsageString returns usage string.
-func (c *Command) UsageString() string {
-	// Storing normal writers
-	tmpOutput := c.outWriter
-	tmpErr := c.errWriter
-
-	bb := new(bytes.Buffer)
-	c.outWriter = bb
-	c.errWriter = bb
-
-	c.Usage()
-
-	// Setting things back to normal
-	c.outWriter = tmpOutput
-	c.errWriter = tmpErr
-
-	return bb.String()
-}
-
-// HelpTemplate return help template for the command.
-func (c *Command) HelpTemplate() string {
-	return `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
-
-{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`
-}
-
-func (c *Command) HelpFunc() func(*Command, []string) {
-	if c.HasParent() {
-		return c.Parent().HelpFunc()
-	}
-	return func(c *Command, a []string) {
-		err := tmpl(c.OutOrStdout(), c.HelpTemplate(), c)
-		if err != nil {
-			c.PrintErrln(err)
-		}
-	}
-}
-
-// Help puts out the help for the command.
-// Used when a user calls help [command].
-func (c *Command) Help() error {
-	c.HelpFunc()(c, []string{})
-	return nil
+func (c *Command) HandlerErr(err error) {
+	println("Error:", err.Error())
+	printf("Run '%v --help' for usage.\n", c.CommandPath())
 }
 
 func (c *Command) UsageTemplate() string {
@@ -396,9 +270,9 @@ func (c *Command) UsageFunc() (f func(*Command) error) {
 		return c.Parent().UsageFunc()
 	}
 	return func(c *Command) error {
-		err := tmpl(c.OutOrStderr(), c.UsageTemplate(), c)
+		err := tmpl(os.Stderr, c.UsageTemplate(), c)
 		if err != nil {
-			c.PrintErrln(err)
+			println(err)
 		}
 		return err
 	}
@@ -421,10 +295,7 @@ func (c *Command) NamePadding() int {
 }
 
 var templateFuncs = template.FuncMap{
-	"trim":                    strings.TrimSpace,
-	"trimRightSpace":          trimRightSpace,
-	"trimTrailingWhitespaces": trimRightSpace,
-	"rpad":                    rpad,
+	"rpad": rpad,
 }
 
 // tmpl executes the given template text on data, writing the result to w.
@@ -433,10 +304,6 @@ func tmpl(w io.Writer, text string, data interface{}) error {
 	t.Funcs(templateFuncs)
 	template.Must(t.Parse(text))
 	return t.Execute(w, data)
-}
-
-func trimRightSpace(s string) string {
-	return strings.TrimRightFunc(s, unicode.IsSpace)
 }
 
 // rpad adds padding to the right of a string.
