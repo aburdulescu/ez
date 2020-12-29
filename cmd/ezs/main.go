@@ -20,12 +20,16 @@ func main() {
 var dbPath string
 var seedAddr string
 var trackerAddr string
+var disableLog bool
+
 var trackerURL string
+var logger Logger
 
 func run() error {
 	flag.StringVar(&dbPath, "dbpath", "./seeder.db", "path where the database is stored")
 	flag.StringVar(&seedAddr, "seedaddr", "", "address to used by peers")
 	flag.StringVar(&trackerAddr, "trackeraddr", "", "tracker address")
+	flag.BoolVar(&disableLog, "disable-log", false, "disable logging")
 	flag.Parse()
 
 	if seedAddr == "" {
@@ -35,10 +39,16 @@ func run() error {
 		return fmt.Errorf("trackeraddr is empty")
 	}
 
+	if disableLog {
+		logger = &NopLogger{
+			log.New(os.Stderr, "", 0),
+		}
+	} else {
+		logger = log.New(os.Stderr, "", log.Lshortfile|log.Ltime|log.Lmicroseconds|log.LUTC)
+	}
+
 	seedAddr = seedAddr + ":22201"
 	trackerURL = "http://" + trackerAddr + ":22200" + "/"
-
-	log.SetFlags(log.Lshortfile | log.Ltime | log.Lmicroseconds | log.LUTC)
 
 	db, err := NewDB(dbPath)
 	if err != nil {

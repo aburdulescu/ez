@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/aburdulescu/ez/ezt"
@@ -36,7 +35,7 @@ func AddFile(db *DB, path string) (string, error) {
 		Addr: seedAddr,
 	}
 	if err := trackerClient.Add(req); err != nil {
-		log.Println(err)
+		logger.Println(err)
 	}
 	return id, nil
 }
@@ -50,7 +49,7 @@ func RemoveFile(db *DB, id string) error {
 		Id: id, Addr: seedAddr,
 	}
 	if err := trackerClient.Remove(req); err != nil {
-		log.Println(err)
+		logger.Println(err)
 	}
 	return nil
 }

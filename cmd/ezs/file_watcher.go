@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
@@ -76,43 +75,43 @@ func (w Watcher) Run() {
 			if !ok {
 				return
 			}
-			log.Println("event:", event)
+			logger.Println("event:", event)
 			switch {
 			case (event.Op & (fsnotify.Remove | fsnotify.Rename)) != 0:
 				id, ok := w.fileIds[event.Name]
 				if !ok {
-					log.Printf("%s not found", event.Name)
+					logger.Printf("%s not found", event.Name)
 					continue
 				}
 				if err := RemoveFile(w.db, id); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 				if err := w.remove(event.Name); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 			case (event.Op & (fsnotify.Write | fsnotify.Chmod)) != 0:
 				id, ok := w.fileIds[event.Name]
 				if !ok {
-					log.Printf("%s not found", event.Name)
+					logger.Printf("%s not found", event.Name)
 					continue
 				}
 				if err := RemoveFile(w.db, id); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 				if err := w.remove(event.Name); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 				id, err := AddFile(w.db, event.Name)
 				if err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 				if err := w.add(event.Name, id); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 			default:
@@ -121,18 +120,18 @@ func (w Watcher) Run() {
 			if !ok {
 				return
 			}
-			log.Println("error:", err)
+			logger.Println("error:", err)
 		case e := <-w.incoming:
-			log.Println(e)
+			logger.Println(e)
 			switch e.Op {
 			case AddOp:
 				if err := w.add(e.Path, e.Id); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 			case RmOp:
 				if err := w.remove(e.Id); err != nil {
-					log.Println(err)
+					logger.Println(err)
 					continue
 				}
 			default:

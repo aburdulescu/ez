@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -47,7 +46,7 @@ func (s SeederServer) ListenAndServe() {
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			continue
 		}
 		h := SeederServerReqHandler{
@@ -67,30 +66,30 @@ func (h SeederServerReqHandler) run() {
 			return
 		}
 		if err != nil {
-			log.Printf("%s: error: %v\n", remAddr, err)
+			logger.Printf("%s: error: %v\n", remAddr, err)
 			continue
 		}
 		msgType := msg.Type()
 		switch msgType {
 		case swp.CONNECT:
 			req := msg.(swp.Connect)
-			log.Printf("%s: CONNECT %v\n", remAddr, req.Id)
+			logger.Printf("%s: CONNECT %v\n", remAddr, req.Id)
 			if err := h.handleConnect(req.Id); err != nil {
-				log.Printf("%s: error: %v\n", remAddr, err)
+				logger.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case swp.DISCONNECT:
-			log.Printf("%s: DISCONNECT\n", remAddr)
+			logger.Printf("%s: DISCONNECT\n", remAddr)
 			if err := h.handleDisconnect(); err != nil {
-				log.Printf("%s: error: %v\n", remAddr, err)
+				logger.Printf("%s: error: %v\n", remAddr, err)
 			}
 		case swp.GETCHUNK:
 			req := msg.(swp.Getchunk)
-			log.Printf("%s: GETCHUNK %v\n", remAddr, req.Index)
+			logger.Printf("%s: GETCHUNK %v\n", remAddr, req.Index)
 			if err := h.handleGetchunk(req.Index); err != nil {
-				log.Printf("%s: error: %v\n", remAddr, err)
+				logger.Printf("%s: error: %v\n", remAddr, err)
 			}
 		default:
-			log.Printf("%s: error: unknown request type %v\n", remAddr, msgType)
+			logger.Printf("%s: error: unknown request type %v\n", remAddr, msgType)
 		}
 		cleanup()
 	}
@@ -100,18 +99,18 @@ func (h *SeederServerReqHandler) handleConnect(id string) error {
 	h.id = id
 	ifile, err := h.db.GetIFile(h.id)
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	h.ifile = &ifile
 	f, err := os.Open(filepath.Join(ifile.Dir, ifile.Name))
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	h.f = f
 	if err := swp.Send(h.conn, swp.Ack{}); err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	return nil
@@ -123,7 +122,7 @@ func (h *SeederServerReqHandler) handleDisconnect() error {
 	h.f.Close()
 	h.f = nil
 	if err := swp.Send(h.conn, swp.Ack{}); err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	return nil
@@ -132,12 +131,12 @@ func (h *SeederServerReqHandler) handleDisconnect() error {
 func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 	checksums, err := h.db.GetChecksums(h.id)
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	chunkBuf, n, err := readChunk(h.f, index)
 	if err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	defer chunkPool.Put(chunkBuf)
@@ -153,22 +152,22 @@ func (h SeederServerReqHandler) handleGetchunk(index uint64) error {
 		Checksum: uint64(checksums[index]),
 	}
 	if err := swp.Send(h.conn, rsp); err != nil {
-		log.Println(err)
+		logger.Println(err)
 		return err
 	}
 	i := uint64(0)
 	for ; i < npieces-remainder; i++ {
 		piece := chunk[i*cmn.PieceSize : (i+1)*cmn.PieceSize]
 		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return err
 		}
 	}
 	if remainder != 0 {
-		log.Println(i * cmn.PieceSize)
+		logger.Println(i * cmn.PieceSize)
 		piece := chunk[i*cmn.PieceSize:]
 		if err := swp.Send(h.conn, swp.Piece{piece}); err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return err
 		}
 	}
@@ -180,7 +179,7 @@ func readChunk(f *os.File, i uint64) ([]byte, int, error) {
 	b := chunkPool.Get().([]byte)
 	n, err := r.Read(b)
 	if err != io.EOF && err != nil {
-		log.Println(n, err)
+		logger.Println(n, err)
 		return nil, 0, err
 	}
 	return b, n, nil

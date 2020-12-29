@@ -30,7 +30,7 @@ func (s LocalServer) Run() {
 func errHandler(f func(w http.ResponseWriter, r *http.Request) (int, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-		log.Println(r.Method, r.URL)
+		logger.Println(r.Method, r.URL)
 		status, err := f(w, r)
 		if err != nil {
 			http.Error(w, err.Error(), status)

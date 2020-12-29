@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net"
 
 	"github.com/aburdulescu/ez/ezt"
@@ -29,7 +28,7 @@ func NewTrackerProbeServer(addr string, db *DB) (TrackerProbeServer, error) {
 	}
 	s := TrackerProbeServer{conn: c, db: db}
 	if err := updateTracker(s.db); err != nil {
-		log.Println(err)
+		logger.Println(err)
 	}
 	return s, nil
 }
@@ -39,12 +38,12 @@ func (s TrackerProbeServer) ListenAndServe() {
 	for {
 		b := make([]byte, maxDatagramSize)
 		if _, err := s.conn.Read(b); err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return
 		}
-		log.Println("tracker sent probe")
+		logger.Println("tracker sent probe")
 		if err := updateTracker(s.db); err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return
 		}
 	}
