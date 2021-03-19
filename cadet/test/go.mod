@@ -4,4 +4,4 @@ go 1.15
 
 replace github.com/aburdulescu/ez/cadet => ../../cadet
 
-require github.com/aburdulescu/ez/cadet v0.0.0-00010101000000-000000000000
+require github.com/aburdulescu/ez/cadet v0.0.0-20201229150525-18426b6b5b81
