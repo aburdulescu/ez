@@ -7,3 +7,7 @@ services:
 
   seeder:
     build: dockerfiles/seeder
+    volumes:
+      - type: bind
+        source: ./test_files
+        target: /files
