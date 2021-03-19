@@ -6,3 +6,4 @@ cmd/ezs/ezs
 /swarm/files
 /swarm/seeder-entrypoint.sh
 /cadet/test/test
+/test_files/

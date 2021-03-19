@@ -1,4 +1,4 @@
 Dockerfile
-/rpi
-/swarm
-/test_files
+/rpi/
+/swarm/
+/test_files/

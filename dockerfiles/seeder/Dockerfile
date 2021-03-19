@@ -1,3 +1,2 @@
 FROM ez_base
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ezs -dbpath=/tmp/ez_seeder.db -seedaddr=$(hostname -I) -trackeraddr=tracker
