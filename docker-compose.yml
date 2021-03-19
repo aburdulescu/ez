@@ -1,0 +1,9 @@
+services:
+  base:
+    build: .
+
+  tracker:
+    build: dockerfiles/tracker
+
+  seeder:
+    build: dockerfiles/seeder
