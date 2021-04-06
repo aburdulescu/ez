@@ -3,7 +3,6 @@ cmd/ezl/ezl
 cmd/ezt/ezt
 cmd/ezs/ezs
 /cmd/ezs/seeder.db
-/swarm/files
-/swarm/seeder-entrypoint.sh
 /cadet/test/test
 /test_files/
+/bin_*_*/
