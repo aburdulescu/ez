@@ -29,6 +29,7 @@ test:
 	cd cmd/ezs && go test
 
 clean:
+	rm -rf $(BINDIR)
 	cd cadet/test && go clean
 	cd cmd/ezl && go clean
 	cd cmd/ez && go clean
