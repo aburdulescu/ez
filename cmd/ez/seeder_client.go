@@ -22,6 +22,7 @@ func AllocChunk() []byte {
 }
 
 func ReleaseChunk(b []byte) {
+	// put back chunk buffer but reset it(i.e. [:0])
 	chunkPool.Put(b[:0])
 }
 
