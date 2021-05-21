@@ -1,6 +1,6 @@
 module github.com/aburdulescu/ez/swp
 
-go 1.15
+go 1.16
 
 replace github.com/aburdulescu/ez/cmn => ../cmn
 

@@ -1,3 +1,3 @@
 module github.com/aburdulescu/ez/ezt
 
-go 1.14
+go 1.16

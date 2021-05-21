@@ -1,19 +1,18 @@
 module github.com/aburdulescu/ez
 
-go 1.14
+go 1.16
 
 require (
+	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/aburdulescu/ez/cadet v0.0.0-20201229150525-18426b6b5b81
 	github.com/aburdulescu/ez/cmn v0.0.0-20201229150525-18426b6b5b81
 	github.com/aburdulescu/ez/ezt v0.0.0-20201229150525-18426b6b5b81
 	github.com/aburdulescu/ez/swp v0.0.0-20201229150525-18426b6b5b81
-	github.com/cheggaaa/pb/v3 v3.0.6
-	github.com/fatih/color v1.10.0 // indirect
+	github.com/cheggaaa/pb/v3 v3.0.8
+	github.com/fatih/color v1.11.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/mattn/go-runewidth v0.0.10 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
 	go.etcd.io/bbolt v1.3.5
-	golang.org/x/sys v0.0.0-20210315160823-c6e025ad8005 // indirect
+	golang.org/x/sys v0.0.0-20210521090106-6ca3eb03dfc2 // indirect
 )
 
 replace github.com/aburdulescu/ez/cmn => ./cmn

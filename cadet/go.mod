@@ -1,3 +1,3 @@
 module github.com/aburdulescu/ez/cadet
 
-go 1.15
+go 1.16

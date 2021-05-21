@@ -12,11 +12,11 @@ build:
 	cd cmd/ez && go build -ldflags "-s -w"
 	cp cmd/ez/ez $(BINDIR)/
 	cd cmd/ezl && go build -ldflags "-s -w"
-	cp cmd/ezt/ezt $(BINDIR)/
-	cd cmd/ezt && go build -ldflags "-s -w"
-	cp cmd/ezs/ezs $(BINDIR)/
-	cd cmd/ezs && go build -ldflags "-s -w"
 	cp cmd/ezl/ezl $(BINDIR)/
+	cd cmd/ezt && go build -ldflags "-s -w"
+	cp cmd/ezt/ezt $(BINDIR)/
+	cd cmd/ezs && go build -ldflags "-s -w"
+	cp cmd/ezs/ezs $(BINDIR)/
 
 test:
 	cd ezt && go test
