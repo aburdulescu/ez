@@ -2,6 +2,7 @@ package swp
 
 import (
 	"encoding/binary"
+	"log"
 	"testing"
 )
 
@@ -145,4 +146,14 @@ func TestMarshal(t *testing.T) {
 			}
 		})
 	})
+}
+
+func BenchmarkMarshalPiece(b *testing.B) {
+	buf := make([]byte, 32<<10)
+	msg := Piece{make([]byte, 8<<10)}
+	for i := 0; i < b.N; i++ {
+		if err := Marshal(msg, buf); err != nil {
+			log.Println(err)
+		}
+	}
 }

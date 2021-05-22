@@ -175,3 +175,11 @@ func compareByteSlice(l, r []byte) error {
 	}
 	return nil
 }
+
+func BenchmarkUnmarshalPiece(b *testing.B) {
+	buf := make([]byte, 8<<10+1)
+	buf[0] = byte(PIECE)
+	for i := 0; i < b.N; i++ {
+		Unmarshal(buf)
+	}
+}
