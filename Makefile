@@ -1,4 +1,4 @@
-BINDIR = bin_$(shell go env GOOS)_$(shell go env GOARCH)
+BINDIR = bin/$(shell go env GOOS)/$(shell go env GOARCH)
 
 .PHONY: build test clean update
 
