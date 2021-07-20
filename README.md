@@ -2,18 +2,9 @@
 
 Easy to use cross-platform p2p file transfer tool for your local network
 
-## Install
+## Getting started
 
-- [install golang](https://golang.org/doc/install)
-- download binaries:
-
-```
-go get -ldflags="-s -w" github.com/aburdulescu/ez/cmd/...
-```
-
-## Usage
-
-There are 3 types of entities that participate in the transfer of a file:
+There are 4 types of entities that participate in the transfer of a file:
 
 - tracker(binary executable named `ezt`)
 - seeder(binary executable named `ezs`)
@@ -31,7 +22,17 @@ The seeder client manages the set of files which the seeder is responsible for.
 
 The client lists the available files and downloads them if requested.
 
-### Simplest setup
+
+### Install
+
+- [install golang](https://golang.org/doc/install)
+- download binaries:
+
+```
+go get -ldflags="-s -w" github.com/aburdulescu/ez/cmd/...
+```
+
+### Simple setup
 
 You need at least 2 machines(containers, VMs, native).
 
@@ -99,3 +100,9 @@ Now you can list the available files:
 And download one of them:
 
 `ez get file_id`
+
+### A more real setup
+
+When serving multiple big files, it would be best to have the tracker and the seeders on separate machines.
+
+Also there needs to be more than one seeder for each file, otherwise there is no point in using this tool.
