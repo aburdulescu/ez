@@ -42,7 +42,7 @@ func write(w io.Writer, b []byte) error {
 	}
 	binary.LittleEndian.PutUint16(b[:2], uint16(len(b[2:])))
 	buf := bytes.NewBuffer(b)
-	copyBuf := make([]byte, buf.Len())
+	copyBuf := make([]byte, buf.Len()) // TODO: PERF: this should be avoided!
 	n, err := io.CopyBuffer(w, buf, copyBuf)
 	if err != nil {
 		log.Println(buf.Len(), n, err)

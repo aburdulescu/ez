@@ -1,6 +1,13 @@
 /cmd/ez/ez
+/cmd/ez/*.csv
+
 /cmd/ezl/ezl
+
 /cmd/ezt/ezt
+
+/cmd/ez-perf/ez-perf
+/cmd/ez-perf/*.csv
+
 /cmd/ezs/ezs
 /cmd/ezs/seeder.db
 

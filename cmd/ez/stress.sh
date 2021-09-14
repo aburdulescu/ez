@@ -5,5 +5,5 @@
 for i in $(seq 1 $1)
 do
     ./perf.sh run $2
-    sleep 10
+    sleep 5
 done

@@ -56,12 +56,13 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	}
 	defer f.Close()
 	d.f = f
-
-	d.pb = pb.New64(ifile.Size)
-	d.pb.Set(pb.Bytes, true)
-	d.pb.Set(pb.SIBytesPrefix, true)
-	d.pb.Start()
-	defer d.pb.Finish()
+	if !disableGetProgressBar {
+		d.pb = pb.New64(ifile.Size)
+		d.pb.Set(pb.Bytes, true)
+		d.pb.Set(pb.SIBytesPrefix, true)
+		d.pb.Start()
+		defer d.pb.Finish()
+	}
 
 	nchunks := uint64(ifile.Size / cmn.ChunkSize)
 	if ifile.Size%cmn.ChunkSize != 0 {
@@ -130,8 +131,10 @@ func (d Downloader) dwChunks(start, end uint64) error {
 			log.Println(err, n)
 			return err
 		}
-		d.pb.Add(n)
-		ReleaseChunk(chunk.buf.Bytes())
+		ReleaseChunk(chunk.buf)
+		if !disableGetProgressBar {
+			d.pb.Add(n)
+		}
 	}
 	return nil
 }

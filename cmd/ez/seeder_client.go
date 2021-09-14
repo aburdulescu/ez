@@ -13,17 +13,19 @@ import (
 
 var chunkPool = sync.Pool{
 	New: func() interface{} {
-		return make([]byte, 0, cmn.ChunkSize)
+		buf := new(bytes.Buffer)
+		buf.Grow(cmn.ChunkSize)
+		return buf
 	},
 }
 
-func AllocChunk() []byte {
-	return chunkPool.Get().([]byte)
+func AllocChunk() *bytes.Buffer {
+	return chunkPool.Get().(*bytes.Buffer)
 }
 
-func ReleaseChunk(b []byte) {
-	// put back chunk buffer but reset it(i.e. [:0])
-	chunkPool.Put(b[:0])
+func ReleaseChunk(b *bytes.Buffer) {
+	b.Reset()
+	chunkPool.Put(b)
 }
 
 type SeederClient struct {
@@ -109,7 +111,7 @@ func (c SeederClient) Getchunk(index uint64) (*bytes.Buffer, error) {
 	}
 	chunkinfoMsg := rsp.(swp.Chunkinfo)
 	npieces := chunkinfoMsg.NPieces
-	buf := bytes.NewBuffer(AllocChunk())
+	buf := AllocChunk()
 	for i := uint64(0); i < npieces; i++ {
 		rsp, cleanup, err := swp.Recv(c.conn)
 		if err != nil {

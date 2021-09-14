@@ -27,7 +27,7 @@ var logger Logger
 
 func run() error {
 	flag.StringVar(&dbPath, "dbpath", "./seeder.db", "path where the database is stored")
-	flag.StringVar(&seedAddr, "seedaddr", "", "address to used by peers")
+	flag.StringVar(&seedAddr, "seedaddr", "", "address to be used by peers")
 	flag.StringVar(&trackerAddr, "trackeraddr", "", "tracker address")
 	flag.BoolVar(&disableLog, "disable-log", false, "disable logging")
 	flag.Parse()

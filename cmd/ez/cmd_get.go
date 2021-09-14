@@ -7,11 +7,24 @@ import (
 	"github.com/aburdulescu/ez/ezt"
 )
 
+var disableGetProgressBar bool = false
+
 func onGet(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("id wasn't provided")
 	}
-	id := args[0]
+	var id string
+	if len(args) > 1 {
+		switch args[0] {
+		case "--no-progress":
+			disableGetProgressBar = true
+		default:
+			return fmt.Errorf("unknown flag %s", args[0])
+		}
+		id = args[1]
+	} else {
+		id = args[0]
+	}
 	trackerURL, err := getTrackerURL()
 	if err != nil {
 		return err

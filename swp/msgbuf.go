@@ -28,7 +28,7 @@ func AllocMsgbuf(size int) MsgBuffer {
 
 func ReleaseMsgbuf(b []byte) {
 	if len(b) >= cmn.PieceSize {
-		msgbufPool.Put(b[:POOL_BUF_SIZE])
+		msgbufPool.Put(b[:POOL_BUF_SIZE]) // TODO: PERF: this causes GC activity
 	}
 }
 

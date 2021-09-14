@@ -11,7 +11,7 @@ case $1 in
     "run")
         clean
         go build -ldflags "-s -w"
-        /usr/bin/time -f "%E %MKB" ./ez get $2
+        /usr/bin/time -f "%e,%M" ./ez get --no-progress $2
     ;;
     *)
     ;;
