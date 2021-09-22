@@ -7,7 +7,7 @@ import (
 	"github.com/aburdulescu/ez/ezt"
 )
 
-var disableGetProgressBar bool = false
+var fQuiet bool = false
 
 func onGet(args []string) error {
 	if len(args) < 1 {
@@ -16,8 +16,8 @@ func onGet(args []string) error {
 	var id string
 	if len(args) > 1 {
 		switch args[0] {
-		case "--no-progress":
-			disableGetProgressBar = true
+		case "-q":
+			fQuiet = true
 		default:
 			return fmt.Errorf("unknown flag %s", args[0])
 		}

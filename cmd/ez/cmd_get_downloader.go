@@ -56,7 +56,7 @@ func (d *Downloader) Run(id string, ifile ezt.IFile, peers []string) error {
 	}
 	defer f.Close()
 	d.f = f
-	if !disableGetProgressBar {
+	if !fQuiet {
 		d.pb = pb.New64(ifile.Size)
 		d.pb.Set(pb.Bytes, true)
 		d.pb.Set(pb.SIBytesPrefix, true)
@@ -132,7 +132,7 @@ func (d Downloader) dwChunks(start, end uint64) error {
 			return err
 		}
 		ReleaseChunk(chunk.buf)
-		if !disableGetProgressBar {
+		if !fQuiet {
 			d.pb.Add(n)
 		}
 	}
