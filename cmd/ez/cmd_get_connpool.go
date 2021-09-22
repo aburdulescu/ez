@@ -80,6 +80,7 @@ func (p *ConnPool) Len() int {
 
 func (p *ConnPool) Connect(id string) error {
 	p.mu.RLock()
+	defer p.mu.RUnlock()
 	for _, clients := range p.data {
 		for _, client := range clients {
 			if err := client.Connect(id); err != nil {
@@ -88,7 +89,6 @@ func (p *ConnPool) Connect(id string) error {
 			}
 		}
 	}
-	p.mu.RUnlock()
 	return nil
 }
 
