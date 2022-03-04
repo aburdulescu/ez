@@ -1,14 +1,6 @@
-FROM debian:testing-slim AS runtime
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && \
-    apt-get install -y \
-    procps \
-    iproute2 \
-    iputils-ping \
-    netcat \
-    dnsutils
+FROM alpine AS runtime
 
-FROM golang AS builder
+FROM golang:alpine AS builder
 COPY cmn /ez/cmn
 COPY cmd /ez/cmd
 COPY ezt /ez/ezt
@@ -17,7 +9,11 @@ COPY go.* /ez/
 COPY Makefile /ez/
 COPY swp /ez/swp
 WORKDIR /ez
-RUN GOOS=linux GOARCH=amd64 make clean && make
+RUN go env -w CGO_ENABLED=0 && GOOS=linux GOARCH=amd64 \
+    cd cmd/ez && go clean && go build && cd -; \
+    cd cmd/ezl && go clean && go build && cd -; \
+    cd cmd/ezt && go clean && go build && cd -; \
+    cd cmd/ezs && go clean && go build
 
 FROM runtime
 COPY --from=builder /ez/cmd/ez/ez /usr/local/bin/ez
