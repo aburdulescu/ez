@@ -1,0 +1,3 @@
+* cmd/ez [0/1]
+
+** TODO implement progressbar(use github.com/mitchellh/ioprogress but add Writer)
