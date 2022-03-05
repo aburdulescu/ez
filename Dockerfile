@@ -9,7 +9,7 @@ COPY go.* /ez/
 COPY Makefile /ez/
 COPY swp /ez/swp
 WORKDIR /ez
-RUN go env -w CGO_ENABLED=0 && GOOS=linux GOARCH=amd64 \
+RUN GOOS=linux GOARCH=amd64 \
     cd cmd/ez && go clean && go build && cd -; \
     cd cmd/ezl && go clean && go build && cd -; \
     cd cmd/ezt && go clean && go build && cd -; \

@@ -1,6 +1,6 @@
 module github.com/aburdulescu/ez
 
-go 1.16
+go 1.17
 
 require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -12,4 +12,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+)
+
+require (
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 )

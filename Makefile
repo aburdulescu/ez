@@ -8,14 +8,14 @@ build:
 	cd ezt && go build
 	cd swp && go build
 	cd cadet && go build
-	cd cadet/test && go build -ldflags "-s -w"
-	cd cmd/ez && go build -ldflags "-s -w"
+	cd cadet/test && go build
+	cd cmd/ez && go build
 	cp cmd/ez/ez $(BINDIR)/
-	cd cmd/ezl && go build -ldflags "-s -w"
+	cd cmd/ezl && go build
 	cp cmd/ezl/ezl $(BINDIR)/
-	cd cmd/ezt && go build -ldflags "-s -w"
+	cd cmd/ezt && go build
 	cp cmd/ezt/ezt $(BINDIR)/
-	cd cmd/ezs && go build -ldflags "-s -w"
+	cd cmd/ezs && go build
 	cp cmd/ezs/ezs $(BINDIR)/
 
 test:
@@ -38,12 +38,12 @@ clean:
 	find -type f -name "f*B" | xargs rm -f
 
 update:
-	cd cmn && go mod tidy && go get -u
-	cd swp && go mod tidy && go get -u
-	cd ezt && go mod tidy && go get -u
-	cd cadet && go mod tidy && go get -u
-	cd cadet/test && go mod tidy && go get -u
-	cd cmd/ez && go mod tidy && go get -u
-	cd cmd/ezl && go mod tidy && go get -u
-	cd cmd/ezt && go mod tidy && go get -u
-	cd cmd/ezs && go mod tidy && go get -u
+	cd cmn && go get -u && go mod tidy
+	cd swp && go get -u && go mod tidy
+	cd ezt && go get -u && go mod tidy
+	cd cadet && go get -u && go mod tidy
+	cd cadet/test && go get -u && go mod tidy
+	cd cmd/ez && go get -u && go mod tidy
+	cd cmd/ezl && go get -u && go mod tidy
+	cd cmd/ezt && go get -u && go mod tidy
+	cd cmd/ezs && go get -u && go mod tidy
