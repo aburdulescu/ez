@@ -1,5 +1,5 @@
 const std = @import("std");
 
 pub fn main() !void {
-    std.log.warn("hello", .{});
+    std.log.warn("hello from zig", .{});
 }
