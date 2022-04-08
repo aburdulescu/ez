@@ -1,6 +1,6 @@
 # ez
 
-Easy to use cross-platform p2p file transfer tool for your local network
+Easy to use cross-platform p2p file transfer tool for your local network.
 
 ## Getting started
 
