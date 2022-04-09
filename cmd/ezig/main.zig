@@ -45,7 +45,7 @@ pub fn main() !void {
     {
         return std.io.getStdOut().writeAll(usage);
     } else if (std.mem.eql(u8, cmd, "list")) {
-        return cmdList(cmd_args);
+        return cmdList();
     } else if (std.mem.eql(u8, cmd, "download")) {
         return cmdDownload(cmd_args);
     } else if (std.mem.eql(u8, cmd, "tracker")) {
@@ -72,9 +72,7 @@ fn findCommand(needle: []const u8) ?[]const u8 {
     return null;
 }
 
-fn cmdList(args: []const []const u8) !void {
-    _ = args; // no args
-
+fn cmdList() !void {
     std.log.warn("list", .{});
 
     // get tracker addr
@@ -88,27 +86,6 @@ fn cmdDownload(args: []const []const u8) !void {
     std.log.warn("download", .{});
 }
 
-fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const f = try std.fs.openFileAbsolute(path, std.fs.File.OpenFlags{});
-    defer f.close();
-    const st = try f.stat();
-    const content = try f.reader().readAllAlloc(all, st.size);
-    return content;
-}
-
-fn getTracker() ![]const u8 {}
-
-pub const Error = error{
-    HomeNotFound,
-};
-
-fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
-    const home_dir = os.getenv("HOME") orelse return error.HomeNotFound;
-    const tracker_path = try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
-    defer all.free(tracker_path);
-    return try readFile(all, tracker_path);
-}
-
 fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
         const tracker_addr = try getTrackerAddr(all);
@@ -118,6 +95,25 @@ fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
         // test to see if valid addr(ip/hostname)?
         // set given tracker addr in ~/.ezig/tracker
     }
+}
+
+const Error = error{
+    HomeNotFound,
+};
+
+fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
+    const f = try std.fs.openFileAbsolute(path, std.fs.File.OpenFlags{});
+    defer f.close();
+    const st = try f.stat();
+    const content = try f.reader().readAllAlloc(all, st.size);
+    return content;
+}
+
+fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
+    const home_dir = os.getenv("HOME") orelse return error.HomeNotFound;
+    const tracker_path = try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
+    defer all.free(tracker_path);
+    return try readFile(all, tracker_path);
 }
 
 fn fatal(comptime format: []const u8, args: anytype) noreturn {
