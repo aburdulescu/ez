@@ -1,4 +1,6 @@
 const std = @import("std");
+const os = std.os;
+const fs = std.fs;
 
 const usage =
     \\Usage: ezig [command] [options]
@@ -47,7 +49,7 @@ pub fn main() !void {
     } else if (std.mem.eql(u8, cmd, "download")) {
         return cmdDownload(cmd_args);
     } else if (std.mem.eql(u8, cmd, "tracker")) {
-        return cmdTracker(cmd_args);
+        return cmdTracker(arena, cmd_args);
     } else {
         fatal("unknown command: {s}", .{cmd});
     }
@@ -86,11 +88,32 @@ fn cmdDownload(args: []const []const u8) !void {
     std.log.warn("download", .{});
 }
 
-fn cmdTracker(args: []const []const u8) !void {
-    std.log.warn("tracker", .{});
+fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
+    const f = try std.fs.openFileAbsolute(path, std.fs.File.OpenFlags{});
+    defer f.close();
+    const st = try f.stat();
+    const content = try f.reader().readAllAlloc(all, st.size);
+    return content;
+}
 
+fn getTracker() ![]const u8 {}
+
+pub const Error = error{
+    HomeNotFound,
+};
+
+fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
+    const home_dir = os.getenv("HOME") orelse return error.HomeNotFound;
+    const tracker_path = try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
+    defer all.free(tracker_path);
+    return try readFile(all, tracker_path);
+}
+
+fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
-        // get tracker addr from ~/.ezig/tracker
+        const tracker_addr = try getTrackerAddr(all);
+        defer all.free(tracker_addr);
+        try std.io.getStdOut().writer().print("{s}\n", .{tracker_addr});
     } else {
         // test to see if valid addr(ip/hostname)?
         // set given tracker addr in ~/.ezig/tracker
