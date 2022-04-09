@@ -71,15 +71,30 @@ fn findCommand(needle: []const u8) ?[]const u8 {
 }
 
 fn cmdList(args: []const []const u8) !void {
-    _ = args;
+    _ = args; // no args
+
+    std.log.warn("list", .{});
+
+    // get tracker addr
+    // send req to tracker
+    // print results given by tracker
 }
 
 fn cmdDownload(args: []const []const u8) !void {
     _ = args;
+
+    std.log.warn("download", .{});
 }
 
 fn cmdTracker(args: []const []const u8) !void {
-    _ = args;
+    std.log.warn("tracker", .{});
+
+    if (args.len < 1) {
+        // get tracker addr from ~/.ezig/tracker
+    } else {
+        // test to see if valid addr(ip/hostname)?
+        // set given tracker addr in ~/.ezig/tracker
+    }
 }
 
 fn fatal(comptime format: []const u8, args: anytype) noreturn {
