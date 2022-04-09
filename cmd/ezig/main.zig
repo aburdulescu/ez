@@ -113,7 +113,7 @@ fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
 fn writeFile(path: []const u8, data: []const u8) !void {
     const f = try fs.createFileAbsolute(path, std.fs.File.CreateFlags{});
     defer f.close();
-    return try f.writer().writeAll(data);
+    try f.writer().writeAll(data);
 }
 
 fn createTrackerPath(all: std.mem.Allocator) ![]const u8 {
@@ -130,7 +130,7 @@ fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
 fn setTrackerAddr(all: std.mem.Allocator, value: []const u8) !void {
     const tracker_path = try createTrackerPath(all);
     defer all.free(tracker_path);
-    return try writeFile(tracker_path, value);
+    try writeFile(tracker_path, value);
 }
 
 fn fatal(comptime format: []const u8, args: anytype) noreturn {
