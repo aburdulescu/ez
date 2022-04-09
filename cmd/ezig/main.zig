@@ -92,8 +92,9 @@ fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
         defer all.free(tracker_addr);
         try std.io.getStdOut().writer().print("{s}\n", .{tracker_addr});
     } else {
-        // test to see if valid addr(ip/hostname)?
-        // set given tracker addr in ~/.ezig/tracker
+        // TODO: make next line work!
+        //_ = try std.net.getAddressList(all, args[0], 22200);
+        try setTrackerAddr(all, args[0]);
     }
 }
 
@@ -109,11 +110,27 @@ fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
     return content;
 }
 
-fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
+fn writeFile(path: []const u8, data: []const u8) !void {
+    const f = try fs.createFileAbsolute(path, std.fs.File.CreateFlags{});
+    defer f.close();
+    return try f.writer().writeAll(data);
+}
+
+fn createTrackerPath(all: std.mem.Allocator) ![]const u8 {
     const home_dir = os.getenv("HOME") orelse return error.HomeNotFound;
-    const tracker_path = try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
+    return try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
+}
+
+fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
+    const tracker_path = try createTrackerPath(all);
     defer all.free(tracker_path);
     return try readFile(all, tracker_path);
+}
+
+fn setTrackerAddr(all: std.mem.Allocator, value: []const u8) !void {
+    const tracker_path = try createTrackerPath(all);
+    defer all.free(tracker_path);
+    return try writeFile(tracker_path, value);
 }
 
 fn fatal(comptime format: []const u8, args: anytype) noreturn {
