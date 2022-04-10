@@ -21,9 +21,20 @@ const Query = struct {
 pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: ?[]const Query) !Response {
     _ = allocator;
     _ = query;
-
-    std.log.warn("http://{s}:{d}{s}", .{ host, port, path });
-
+    const w = std.io.getStdOut().writer();
+    if (query != null) {
+        try w.print("http://{s}:{d}{s}?", .{ host, port, path });
+        const queries = query.?;
+        for (queries) |q, i| {
+            if (i != queries.len - 1) {
+                try w.print("{s}={s}&", .{ q.k, q.v });
+            } else {
+                try w.print("{s}={s}\n", .{ q.k, q.v });
+            }
+        }
+    } else {
+        try w.print("http://{s}:{d}{s}\n", .{ host, port, path });
+    }
     return Response{
         .status = "200 OK",
         .status_code = 200,
@@ -38,6 +49,14 @@ pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []co
 
 const testing = std.testing;
 
-test "basic" {
+test "without query" {
     _ = try get(testing.allocator, "localhost", 22200, "/", null);
+}
+
+test "with query" {
+    const query = &[_]Query{
+        .{ .k = "foo", .v = "bar" },
+        .{ .k = "bar", .v = "baz" },
+    };
+    _ = try get(testing.allocator, "localhost", 22200, "/", query);
 }
