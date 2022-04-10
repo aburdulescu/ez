@@ -7,18 +7,10 @@ pub const Response = struct {
     proto_major: int, // e.g. 1
     proto_minor: int, // e.g. 0
 
-    // TODO: use map as Go does?
-    headers: []const []const u8,
+    headers_k: []const []const u8,
+    headers_v: []const []const u8,
 
-    body: []const u8, // e.g. 1
-
-    content_length: i64,
-
-    transfer_encoding: []const []const u8,
-
-    close: bool,
-
-    // uncompressed: bool,
+    body: []const u8,
 };
 
 pub fn get(url: []const u8) !Response {
