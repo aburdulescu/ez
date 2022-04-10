@@ -1,4 +1,6 @@
 const std = @import("std");
+const log = std.log;
+const net = std.net;
 
 pub const Response = struct {
     status: []const u8, // e.g. "200 OK"
@@ -18,23 +20,34 @@ const Query = struct {
     v: []const u8,
 };
 
+fn buildQueryString(queries: []const Query) ![]const u8 {}
+
+const user_agent = "ezhttp";
+
 pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: ?[]const Query) !Response {
     _ = allocator;
     _ = query;
-    const w = std.io.getStdOut().writer();
-    if (query != null) {
-        try w.print("http://{s}:{d}{s}?", .{ host, port, path });
-        const queries = query.?;
-        for (queries) |q, i| {
-            if (i != queries.len - 1) {
-                try w.print("{s}={s}&", .{ q.k, q.v });
-            } else {
-                try w.print("{s}={s}\n", .{ q.k, q.v });
-            }
-        }
-    } else {
-        try w.print("http://{s}:{d}{s}\n", .{ host, port, path });
-    }
+
+    const conn = try net.tcpConnectToHost(allocator, host, 22200);
+    defer conn.close();
+
+    const req_fmt =
+        "GET {s}{s} HTTP/1.1\r\n" ++
+        "Host: {s}:{d}\r\n" ++
+        "User-Agent: " ++ user_agent ++ "\r\n" ++
+        "Accept: */*\r\n" ++
+        "\r\n";
+
+    // build query
+
+    try std.fmt.format(conn.writer(), req_fmt, .{ path, "", host, port });
+
+    var buf: [8196]u8 = undefined;
+    const nread = try conn.read(&buf);
+    std.log.info("read: {d}", .{nread});
+
+    try std.io.getStdOut().writer().print("{s}\n", .{buf});
+
     return Response{
         .status = "200 OK",
         .status_code = 200,
@@ -55,8 +68,7 @@ test "without query" {
 
 test "with query" {
     const query = &[_]Query{
-        .{ .k = "foo", .v = "bar" },
-        .{ .k = "bar", .v = "baz" },
+        .{ .k = "id", .v = "all" },
     };
     _ = try get(testing.allocator, "localhost", 22200, "/", query);
 }
