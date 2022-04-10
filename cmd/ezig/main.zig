@@ -88,7 +88,13 @@ fn cmdDownload(args: []const []const u8) !void {
 
 fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
-        const tracker_addr = try getTrackerAddr(all);
+        const tracker_addr = getTrackerAddr(all) catch |err| {
+            if (err == error.FileNotFound) {
+                fatal("tracker not set", .{});
+            } else {
+                fatal("{}", .{err});
+            }
+        };
         defer all.free(tracker_addr);
         try std.io.getStdOut().writer().print("{s}\n", .{tracker_addr});
     } else {
