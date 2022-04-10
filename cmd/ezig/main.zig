@@ -1,6 +1,8 @@
 const std = @import("std");
 const os = std.os;
 const fs = std.fs;
+const mem = std.mem;
+const net = std.net;
 
 const usage =
     \\Usage: ezig [command] [options]
@@ -39,16 +41,16 @@ pub fn main() !void {
     const cmd = findCommand(args[1]) orelse args[1];
     const cmd_args = args[2..];
 
-    if (std.mem.eql(u8, cmd, "help") or
-        std.mem.eql(u8, cmd, "--help") or
-        std.mem.eql(u8, cmd, "-h"))
+    if (mem.eql(u8, cmd, "help") or
+        mem.eql(u8, cmd, "--help") or
+        mem.eql(u8, cmd, "-h"))
     {
         return std.io.getStdOut().writeAll(usage);
-    } else if (std.mem.eql(u8, cmd, "list")) {
-        return cmdList();
-    } else if (std.mem.eql(u8, cmd, "download")) {
+    } else if (mem.eql(u8, cmd, "list")) {
+        return cmdList(arena);
+    } else if (mem.eql(u8, cmd, "download")) {
         return cmdDownload(cmd_args);
-    } else if (std.mem.eql(u8, cmd, "tracker")) {
+    } else if (mem.eql(u8, cmd, "tracker")) {
         return cmdTracker(arena, cmd_args);
     } else {
         fatal("unknown command: {s}", .{cmd});
@@ -65,41 +67,63 @@ const commands = [_][]const u8{
 
 fn findCommand(needle: []const u8) ?[]const u8 {
     for (commands) |c| {
-        if (std.mem.startsWith(u8, c, needle)) {
+        if (mem.startsWith(u8, c, needle)) {
             return c;
         }
     }
     return null;
 }
 
-fn cmdList() !void {
-    std.log.warn("list", .{});
+fn cmdList(all: mem.Allocator) !void {
+    const tracker_addr = getTrackerAddr(all) catch |err| {
+        if (err == error.FileNotFound) {
+            fatal("tracker not set", .{});
+        } else {
+            fatal("unexpected error: {}", .{err});
+        }
+    };
+    defer all.free(tracker_addr);
 
-    // get tracker addr
-    // send req to tracker
-    // print results given by tracker
+    const conn = net.tcpConnectToHost(all, tracker_addr, 22200) catch |err| {
+        fatal("{}", .{err});
+    };
+    defer conn.close();
+
+    const req =
+        "GET /?id=all HTTP/1.1\r\n" ++
+        "Host: localhost:22200\r\n" ++
+        "User-Agent: ezig\r\n" ++
+        "Accept: */*\r\n" ++
+        "\r\n";
+
+    const nwritten = try conn.write(req);
+    std.log.info("wrote: {d}", .{nwritten});
+
+    var buf: [8196]u8 = undefined;
+    const nread = try conn.read(&buf);
+    std.log.info("read: {d}", .{nread});
+
+    try std.io.getStdOut().writer().print("{s}\n", .{buf});
 }
 
 fn cmdDownload(args: []const []const u8) !void {
     _ = args;
 
-    std.log.warn("download", .{});
+    std.log.info("download", .{});
 }
 
-fn cmdTracker(all: std.mem.Allocator, args: []const []const u8) !void {
+fn cmdTracker(all: mem.Allocator, args: []const []const u8) !void {
     if (args.len < 1) {
         const tracker_addr = getTrackerAddr(all) catch |err| {
             if (err == error.FileNotFound) {
                 fatal("tracker not set", .{});
             } else {
-                fatal("{}", .{err});
+                fatal("unexpected error: {}", .{err});
             }
         };
         defer all.free(tracker_addr);
         try std.io.getStdOut().writer().print("{s}\n", .{tracker_addr});
     } else {
-        // TODO: make next line work!
-        //_ = try std.net.getAddressList(all, args[0], 22200);
         try setTrackerAddr(all, args[0]);
     }
 }
@@ -108,7 +132,7 @@ const Error = error{
     HomeNotFound,
 };
 
-fn readFile(all: std.mem.Allocator, path: []const u8) ![]const u8 {
+fn readFile(all: mem.Allocator, path: []const u8) ![]const u8 {
     const f = try std.fs.openFileAbsolute(path, std.fs.File.OpenFlags{});
     defer f.close();
     const st = try f.stat();
@@ -122,18 +146,20 @@ fn writeFile(path: []const u8, data: []const u8) !void {
     try f.writer().writeAll(data);
 }
 
-fn createTrackerPath(all: std.mem.Allocator) ![]const u8 {
+// returned value must be freed by caller
+fn createTrackerPath(all: mem.Allocator) ![]const u8 {
     const home_dir = os.getenv("HOME") orelse return error.HomeNotFound;
     return try fs.path.join(all, &[_][]const u8{ home_dir, ".ez" });
 }
 
-fn getTrackerAddr(all: std.mem.Allocator) ![]const u8 {
+// returned value must be freed by caller
+fn getTrackerAddr(all: mem.Allocator) ![]const u8 {
     const tracker_path = try createTrackerPath(all);
     defer all.free(tracker_path);
     return try readFile(all, tracker_path);
 }
 
-fn setTrackerAddr(all: std.mem.Allocator, value: []const u8) !void {
+fn setTrackerAddr(all: mem.Allocator, value: []const u8) !void {
     const tracker_path = try createTrackerPath(all);
     defer all.free(tracker_path);
     try writeFile(tracker_path, value);
