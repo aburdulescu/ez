@@ -13,6 +13,11 @@ pub const Response = struct {
     body: []const u8,
 };
 
-pub fn get(url: []const u8) !Response {
+const Query = struct {
+    k: []const u8,
+    v: []const u8,
+};
+
+pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: []const Query) !Response {
     unreachable;
 }
