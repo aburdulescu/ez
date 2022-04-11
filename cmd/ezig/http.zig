@@ -20,13 +20,10 @@ const Query = struct {
     v: []const u8,
 };
 
-fn buildQueryString(queries: []const Query) ![]const u8 {}
-
 const user_agent = "ezhttp";
 
-pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: ?[]const Query) !Response {
+pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: ?[]const u8) !Response {
     _ = allocator;
-    _ = query;
 
     const conn = try net.tcpConnectToHost(allocator, host, 22200);
     defer conn.close();
@@ -38,9 +35,11 @@ pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []co
         "Accept: */*\r\n" ++
         "\r\n";
 
-    // build query
-
-    try std.fmt.format(conn.writer(), req_fmt, .{ path, "", host, port });
+    if (query == null) {
+        try std.fmt.format(conn.writer(), req_fmt, .{ path, "", host, port });
+    } else {
+        try std.fmt.format(conn.writer(), req_fmt, .{ path, query, host, port });
+    }
 
     var buf: [8196]u8 = undefined;
     const nread = try conn.read(&buf);
@@ -67,8 +66,5 @@ test "without query" {
 }
 
 test "with query" {
-    const query = &[_]Query{
-        .{ .k = "id", .v = "all" },
-    };
-    _ = try get(testing.allocator, "localhost", 22200, "/", query);
+    _ = try get(testing.allocator, "localhost", 22200, "/", "?id=all");
 }
