@@ -15,11 +15,6 @@ pub const Response = struct {
     body: []const u8,
 };
 
-const Query = struct {
-    k: []const u8,
-    v: []const u8,
-};
-
 const user_agent = "ezhttp";
 
 pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []const u8, query: ?[]const u8) !Response {
@@ -41,6 +36,7 @@ pub fn get(allocator: std.mem.Allocator, host: []const u8, port: u16, path: []co
         try std.fmt.format(conn.writer(), req_fmt, .{ path, query, host, port });
     }
 
+    // TODO: make the bufffer dynamic
     var buf: [8196]u8 = undefined;
     const nread = try conn.read(&buf);
     std.log.info("read: {d}", .{nread});
